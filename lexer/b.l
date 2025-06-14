@@ -13,14 +13,18 @@ else        { printf("ELSE\n"); }
 goto        { printf("GOTO\n"); }
 while       { printf("WHILE\n"); }
 break       { printf("BREAK\n"); }
-";"         { printf("SEMICOLON\n"); }
-"("         { printf("LPAREN\n"); }
-")"         { printf("RPAREN\n"); }
-"["         { printf("LBRACKET\n"); }
-"]"         { printf("RBRACKET\n"); }
-"{"         { printf("LBRACE\n"); }
-"}"         { printf("RBRACE\n"); }
-","         { printf("COMMA\n"); }
+
+";"         { printf(";\n"); }
+"("         { printf("(\n"); }
+")"         { printf(")\n"); }
+"["         { printf("[\n"); }
+"]"         { printf("]\n"); }
+"{"         { printf("{\n"); }
+"}"         { printf("}\n"); }
+","         { printf(",\n"); }
+"!"         { printf("!\n"); }
+"?"         { printf("?\n"); }
+":"         { printf(":\n"); }
 
 "="         { printf("ASSIGNMENT\n"); }
 
@@ -41,11 +45,6 @@ break       { printf("BREAK\n"); }
 "<<"        |
 "++"        |
 "--"        { printf("OPERATOR: %s\n", yytext); }
-
-"!"         { printf("NOT\n"); }
-
-"?"         { printf("QUESTION\n"); }
-":"         { printf("COLON\n"); }
 
 {NUMBER}    { printf("NUMBER: %s\n", yytext); }
 {NAME}      { printf("NAME: %s\n", yytext); }

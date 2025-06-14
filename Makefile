@@ -9,9 +9,8 @@ BUILD_DIR = build
 SRCS_DIR = srcs
 
 # Files
-LEX_FILE = $(LEXER_DIR)/lex.l
+LEX_FILE = $(LEXER_DIR)/b.l
 LEX_OUTPUT = $(BUILD_DIR)/lex.yy.c
-LEX_HEADER = $(BUILD_DIR)/lex.yy.h
 MAIN_SRC = $(SRCS_DIR)/main.c
 NAME = B
 
