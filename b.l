@@ -37,23 +37,23 @@ goto        { return GOTO; }
 ":"         { return COLON; }
 "="         { return ASSIGNMENT; }
 
-">="        |
-">"         |
-"<="        |
-"<"         |
-"=="        |
-"!="        |
-"*"         |
-"/"         |
-"+"         |
-"-"         |
-"%"         |
-"&"         |
-"|"         |
-">>"        |
-"<<"        |
-"++"        |
-"--"        { return OPERATOR; }
+"&"         { return AMPERSAND; }
+"*"         { return ASTERISK; }
+">="        { return GTE; }
+">"         { return GT; }
+"<="        { return LTE; }
+"<"         { return LT; }
+"=="        { return EQ; }
+"!="        { return NE; }
+"/"         { return DIV; }
+"+"         { return PLUS; }
+"-"         { return MINUS; }
+"%"         { return MOD; }
+"|"         { return PIPE; }
+">>"        { return RSHIFT; }
+"<<"        { return LSHIFT; }
+"++"        { return INCREMENT; }
+"--"        { return DECREMENT; }
 
 {NUMBER}    {
     yylval.number = atoi(yytext);    
