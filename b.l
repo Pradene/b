@@ -13,6 +13,7 @@ ID          [a-zA-Z][a-zA-Z0-9]*
 %option yylineno
 
 %%
+
 extrn       { return EXTRN; }
 auto        { return AUTO; }
 return      { return RETURN; }
@@ -54,11 +55,23 @@ goto        { return GOTO; }
 "++"        |
 "--"        { return OPERATOR; }
 
-{NUMBER}    { return NUMBER; }
-{ID}        { return ID; }
+{NUMBER}    {
+    yylval.number = atoi(yytext);    
+    return NUMBER;
+}
+{ID}        { 
+    yylval.string = strdup(yytext);
+    return ID;
+}
 
-'[^']*'     { return CHAR; }
-\"[^\"]*\"  { return STRING; }
+'[^']*'     {
+    yylval.string = strdup(yytext); 
+    return CHAR;
+}
+\"[^\"]*\"  {
+    yylval.string = strdup(yytext); 
+    return STRING;
+}
 
 [ \t]+      { /* ignore whitespace */ }
 \n          { yycolumn = 0; }

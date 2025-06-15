@@ -1,1 +1,3 @@
-auto i, s;
+main(argc, argv) {
+  auto i, s;
+}
