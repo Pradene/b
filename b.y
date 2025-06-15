@@ -79,23 +79,28 @@ parameters:
 
 statement:
   /* Empty */
-| statement AUTO identifiers SEMICOLON
-| statement EXTRN identifiers SEMICOLON
+| statement AUTO auto_identifiers SEMICOLON
+| statement EXTRN extrn_identifiers SEMICOLON
 ;
 
-identifiers:
+auto_identifiers:
   ID {
     stack_offset += 8;
     printf("sub rsp, 8\n");
     printf("mov qword ptr [rbp-%d], 0\n", stack_offset);
     free($1); 
   }
-| identifiers COMMA ID {
+| auto_identifiers COMMA ID {
     stack_offset += 8;
     printf("sub rsp, 8\n");
     printf("mov qword ptr [rbp-%d], 0\n", stack_offset);
     free($3); 
   }
+;
+
+extrn_identifiers:
+  ID { free($1); }
+| extrn_identifiers COMMA ID { free($3); }
 ;
 
 %%

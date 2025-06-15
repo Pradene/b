@@ -1,3 +1,5 @@
 main(argc, argv) {
-  auto i, s;
+  extrn putchar;
+  auto s1, s2;
+  auto i;
 }
