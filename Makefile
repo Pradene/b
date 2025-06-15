@@ -1,17 +1,21 @@
 # Compiler and flags
 CC = cc
 CFLAGS = -Wall -Wextra
+
 FLEX = flex
+BISON = bison
 
 # Directories
-LEXER_DIR = lexer
 BUILD_DIR = build
-SRCS_DIR = srcs
 
 # Files
-LEX_FILE = $(LEXER_DIR)/b.l
+LEX_INPUT = b.l
 LEX_OUTPUT = $(BUILD_DIR)/lex.yy.c
-MAIN_SRC = $(SRCS_DIR)/main.c
+
+PARSER_INPUT = b.y
+PARSER_OUTPUT = $(BUILD_DIR)/y.tab.c
+PARSER_HEADER = $(BUILD_DIR)/y.tab.h
+
 NAME = B
 
 all: $(NAME)
@@ -20,13 +24,17 @@ all: $(NAME)
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-# Generate lexer code from .l file
-$(LEX_OUTPUT): $(LEX_FILE) | $(BUILD_DIR)
-	$(FLEX) -o $(LEX_OUTPUT) $(LEX_FILE)
+# Generate parser code from .y file
+$(PARSER_OUTPUT) $(PARSER_HEADER): $(PARSER_INPUT) | $(BUILD_DIR)
+	$(BISON) -d -o $(PARSER_OUTPUT) $(PARSER_INPUT)
 
-# Compile the program with generated lexer
-$(NAME): $(LEX_OUTPUT) $(MAIN_SRC) | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -I$(BUILD_DIR) -o $(NAME) $(MAIN_SRC) $(LEX_OUTPUT)
+# Generate lexer code from .l file
+$(LEX_OUTPUT): $(LEX_INPUT) $(PARSER_HEADER) | $(BUILD_DIR)
+	$(FLEX) -o $(LEX_OUTPUT) $(LEX_INPUT)
+
+# Compile the program with generated lexer and parser
+$(NAME): $(LEX_OUTPUT) $(PARSER_OUTPUT) | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -I$(BUILD_DIR) -o $(NAME) $(LEX_OUTPUT) $(PARSER_OUTPUT)
 
 # Clean generated files
 clean:
