@@ -31,7 +31,7 @@ Scope *current_scope = NULL;
 
 // Create a new scope
 void scope_create() {
-  printf("Scope created\n");
+  // printf("Scope created\n");
   Scope *scope = (Scope *)malloc(sizeof(Scope));
   if (scope == NULL) {
     return;
@@ -44,7 +44,7 @@ void scope_create() {
 
 // Destroy the current scope
 void scope_destroy() {
-  printf("Scope destroyed\n");
+  // printf("Scope destroyed\n");
   if (current_scope != NULL) {
     Scope *scope = current_scope;
 

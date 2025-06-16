@@ -6,7 +6,7 @@ int yycolumn = 0;
 #define YY_USER_ACTION yycolumn += yyleng;
 %}
 
-NUMBER      [1-9][0-9]+(\.[0-9]+)?
+NUMBER      [1-9][0-9]*(\.[0-9]+)?
 ID          [a-zA-Z][a-zA-Z0-9]*
 
 %option noyywrap
@@ -56,7 +56,7 @@ goto        { return GOTO; }
 "--"        { return DECREMENT; }
 
 {NUMBER}    {
-    yylval.number = atoi(yytext);    
+    yylval.string = strdup(yytext);
     return NUMBER;
 }
 {ID}        { 

@@ -12,7 +12,8 @@ extern int yylineno;
 extern int yycolumn;
 extern char *yytext;
 
-int stack_offset = 0;
+size_t stack_offset = 0;
+size_t label_id = 0;
 %}
 
 %union {
@@ -20,9 +21,7 @@ int stack_offset = 0;
   int   number;
 }
 
-%token <string> ID
-%token <number> NUMBER
-%token <string> STRING CHAR
+%token <string> ID NUMBER STRING CHAR
 %token AUTO
 %token EXTRN
 %token RETURN
@@ -62,6 +61,7 @@ int stack_offset = 0;
 %token GOTO
 
 %type <number> parameters 
+%type <string> constant 
 
 %start program
 
@@ -117,19 +117,28 @@ statement:
   } statement RBRACE {
     scope_destroy();
   } 
+| WHILE {
+    printf(".L%zu:\n", label_id++);
+  } LPAREN rvalue RPAREN {
+    printf("test eax, eax\n");
+    printf("jz .L%zu\n", label_id);
+  } statement {
+    printf("jmp .L%zu\n", label_id - 1);
+    printf(".L%zu\n", label_id++);
+  }
 ;
 
 auto_identifiers:
   ID {
     stack_offset += 8;
     printf("sub rsp, 8\n");
-    printf("mov qword ptr [rbp-%d], 0\n", stack_offset);
+    printf("mov qword ptr [rbp-%zu], 0\n", stack_offset);
     free($1); 
   }
 | auto_identifiers COMMA ID {
     stack_offset += 8;
     printf("sub rsp, 8\n");
-    printf("mov qword ptr [rbp-%d], 0\n", stack_offset);
+    printf("mov qword ptr [rbp-%zu], 0\n", stack_offset);
     free($3);
   }
 | ID COLON statement
@@ -150,6 +159,11 @@ constant:
 
 assigment:
   ASSIGNMENT opt_binary
+;
+
+inc_dec:
+  INCREMENT
+| DECREMENT
 ;
 
 unary:
@@ -194,8 +208,8 @@ lvalue:
 rvalue:
   LPAREN rvalue RPAREN
 | lvalue
-| constant
-| ASTERISK lvalue
+| constant { printf("mov eax, %s\n", $1); }
+| AMPERSAND lvalue
 ;
 
 /* Optional */
