@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "symbol.h"
 
 int yylex(void);
 void yyerror(const char *s);
@@ -62,18 +63,27 @@ int stack_offset = 0;
 
 %type <number> parameters 
 
+%start program
+
 %%
 
 program:
-  /* Empty */ {
+  {
+    scope_create();
     printf(".intel_syntax noprefix\n");
     printf(".text\n");
+  } definitions {
+    scope_destroy();
   }
-| program definition
+;
+
+definitions:
+  /* Empty */
+| definitions definition
 ;
 
 definition:
-  ID LBRACKET constant_optional RBRACKET value_list_optional SEMICOLON
+  ID opt_array opt_value_list SEMICOLON
 | ID LPAREN parameters RPAREN {
     printf(".text\n");
     printf("global %s\n", $1);
@@ -82,10 +92,13 @@ definition:
     printf("mov rbp, rsp\n");
     stack_offset = 0;
     free($1);
-  } LBRACE statement RBRACE {
+  } LBRACE {
+    scope_create();
+  } statement RBRACE {
     printf("mov rsp, rbp\n");
     printf("pop rbp\n");
     printf("ret\n");
+    scope_destroy();
   }
 ;
 
@@ -99,6 +112,11 @@ statement:
   /* Empty */
 | AUTO auto_identifiers SEMICOLON statement
 | EXTRN extrn_identifiers SEMICOLON statement
+| LBRACE {
+    scope_create();
+  } statement RBRACE {
+    scope_destroy();
+  } 
 ;
 
 auto_identifiers:
@@ -114,6 +132,9 @@ auto_identifiers:
     printf("mov qword ptr [rbp-%d], 0\n", stack_offset);
     free($3);
   }
+| ID COLON statement
+| CASE constant COLON statement
+| LBRACKET  RBRACKET
 ;
 
 extrn_identifiers:
@@ -127,9 +148,31 @@ constant:
 | STRING
 ;
 
-constant_optional:
-  /* Empty */
-| constant
+assigment:
+  ASSIGNMENT opt_binary
+;
+
+unary:
+  MINUS
+| BANG
+;
+
+binary:
+  PIPE
+| AMPERSAND
+| EQ
+| NE
+| LT
+| LTE
+| GT
+| GTE
+| LSHIFT
+| RSHIFT
+| MINUS
+| PLUS
+| MOD
+| ASTERISK
+| DIV
 ;
 
 value:
@@ -140,11 +183,6 @@ value:
 value_list:
   value
 | value_list COMMA value
-;
-
-value_list_optional:
-  /* Empty */
-| value_list
 ;
 
 lvalue:
@@ -160,10 +198,33 @@ rvalue:
 | ASTERISK lvalue
 ;
 
+/* Optional */
+
+opt_array:
+  /* Empty */
+| LBRACKET opt_constant RBRACKET
+;
+
+opt_value_list:
+  /* Empty */
+| value_list
+;
+
+opt_constant:
+  /* Empty */
+| constant
+;
+
+opt_binary:
+  /* Empty */
+| binary
+;
+
 %%
 
 void yyerror(const char *s) {
-  fprintf(stderr, "Error: %d:%d: %s (token: %s)\n", yylineno, yycolumn, s, yytext);
+  (void)s;
+  fprintf(stderr, "Error: %d:%d: Unexpected token '%s'\n", yylineno, yycolumn, yytext);
 }
 
 int main(void) {

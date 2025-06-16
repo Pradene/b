@@ -7,6 +7,7 @@ BISON = bison
 
 # Directories
 BUILD_DIR = build
+INCS_DIR = includes
 
 # Files
 LEX_INPUT = b.l
@@ -14,7 +15,7 @@ LEX_OUTPUT = $(BUILD_DIR)/lex.yy.c
 
 PARSER_INPUT = b.y
 PARSER_OUTPUT = $(BUILD_DIR)/y.tab.c
-PARSER_HEADER = $(BUILD_DIR)/y.tab.h
+PARSER_HEADER = $(INCS_DIR)/y.tab.h
 
 NAME = B
 
@@ -34,7 +35,7 @@ $(LEX_OUTPUT): $(LEX_INPUT) $(PARSER_HEADER) | $(BUILD_DIR)
 
 # Compile the program with generated lexer and parser
 $(NAME): $(LEX_OUTPUT) $(PARSER_OUTPUT) | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -I$(BUILD_DIR) -o $(NAME) $(LEX_OUTPUT) $(PARSER_OUTPUT)
+	$(CC) $(CFLAGS) -I$(INCS_DIR) -o $(NAME) $(LEX_OUTPUT) $(PARSER_OUTPUT)
 
 # Clean generated files
 clean:
