@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "symbol.h"
+#include "y.tab.h"
 
 int yylex(void);
 void yyerror(const char *s);
@@ -12,7 +13,6 @@ extern int yycolumn;
 extern char *yytext;
 
 int stack_offset = 0;
-
 %}
 
 %union {
