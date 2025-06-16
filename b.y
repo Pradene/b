@@ -90,23 +90,23 @@ definition:
     printf(".text\n");
     printf(".globl %s\n", $1);
     printf("%s:\n", $1);
-    printf("push ebp\n");
-    printf("mov ebp, esp\n");
+    printf("  push ebp\n");
+    printf("  mov ebp, esp\n");
     stack_offset = 0;
     free($1);
   } LBRACE {
     scope_create();
   } statement RBRACE {
-    printf("mov esp, ebp\n");
-    printf("pop ebp\n");
-    printf("ret\n");
+    printf("  mov esp, ebp\n");
+    printf("  pop ebp\n");
+    printf("  ret\n");
     scope_destroy();
   }
 ;
 
 parameters:
-  /* Empty */ { $$ = 0; }
-| ID { $$ = 1; free($1); }
+  /* Empty */         { $$ = 0; }
+| ID                  { $$ = 1; free($1); }
 | parameters COMMA ID { $$ = $1 + 1; free($3); }
 ;
 
@@ -130,28 +130,29 @@ statement:
 | WHILE {
     printf(".L%zu:\n", label_id++);
   } LPAREN rvalue RPAREN {
-    printf("test eax, eax\n");
-    printf("jz .L%zu\n", label_id);
+    printf("  test eax, eax\n");
+    printf("  jz .L%zu\n", label_id);
   } statement {
-    printf("jmp .L%zu\n", label_id - 1);
+    printf("  jmp .L%zu\n", label_id - 1);
     printf(".L%zu:\n", label_id++);
   }
 | SWITCH rvalue statement
 | GOTO rvalue SEMICOLON
+| RETURN opt_rvalue SEMICOLON
 | opt_rvalue SEMICOLON
 ;
 
 auto_identifiers:
   ID {
     stack_offset += 4;
-    printf("sub esp, 4\n");
-    printf("mov word ptr [ebp-%zu], 0\n", stack_offset);
+    printf("  sub esp, 4\n");
+    printf("  mov word ptr [ebp-%zu], 0\n", stack_offset);
     free($1); 
   }
 | auto_identifiers COMMA ID {
     stack_offset += 4;
-    printf("sub esp, 4\n");
-    printf("mov word ptr [ebp-%zu], 0\n", stack_offset);
+    printf("  sub esp, 4\n");
+    printf("  mov word ptr [ebp-%zu], 0\n", stack_offset);
     free($3);
   }
 | ID COLON statement
@@ -160,7 +161,7 @@ auto_identifiers:
 ;
 
 extrn_identifiers:
-  ID { free($1); }
+  ID                         { free($1); }
 | extrn_identifiers COMMA ID { free($3); }
 ;
 
@@ -208,16 +209,16 @@ value_list:
 ;
 
 lvalue:
-  ID { printf("mov eax, [%s]\n", $1); }
-| ASTERISK rvalue { printf("mov eax, [eax]\n"); free($2); }
+  ID              { printf("  mov eax, [%s]\n", $1); }
+| ASTERISK rvalue { printf("  mov eax, [eax]\n"); free($2); }
 | rvalue LBRACKET rvalue RBRACKET
 ;
 
 rvalue:
   LPAREN rvalue RPAREN { $$ = $2; }
-| lvalue { $$ = $1; }
-| constant { printf("mov eax, %s\n", $1); }
-| AMPERSAND lvalue { printf("lea eax, []\n"); }
+| lvalue               { $$ = $1; }
+| constant             { printf("  mov eax, %s\n", $1); }
+| AMPERSAND lvalue     { printf("  lea eax, []\n"); }
 ;
 
 /* Optional */
