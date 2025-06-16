@@ -61,7 +61,9 @@ size_t label_id = 0;
 %token GOTO
 
 %type <number> parameters 
-%type <string> constant 
+%type <string> constant
+
+%type <string> lvalue rvalue
 
 %start program
 
@@ -86,17 +88,17 @@ definition:
   ID opt_array opt_value_list SEMICOLON
 | ID LPAREN parameters RPAREN {
     printf(".text\n");
-    printf("global %s\n", $1);
+    printf(".globl %s\n", $1);
     printf("%s:\n", $1);
-    printf("push rbp\n");
-    printf("mov rbp, rsp\n");
+    printf("push ebp\n");
+    printf("mov ebp, esp\n");
     stack_offset = 0;
     free($1);
   } LBRACE {
     scope_create();
   } statement RBRACE {
-    printf("mov rsp, rbp\n");
-    printf("pop rbp\n");
+    printf("mov esp, ebp\n");
+    printf("pop ebp\n");
     printf("ret\n");
     scope_destroy();
   }
@@ -108,15 +110,23 @@ parameters:
 | parameters COMMA ID { $$ = $1 + 1; free($3); }
 ;
 
+value:
+  constant
+| ID
+;
+
 statement:
   /* Empty */
 | AUTO auto_identifiers SEMICOLON statement
 | EXTRN extrn_identifiers SEMICOLON statement
+| ID COLON statement
+| CASE constant COLON statement
 | LBRACE {
     scope_create();
   } statement RBRACE {
     scope_destroy();
-  } 
+  }
+| IF LPAREN rvalue RPAREN statement opt_else
 | WHILE {
     printf(".L%zu:\n", label_id++);
   } LPAREN rvalue RPAREN {
@@ -124,21 +134,24 @@ statement:
     printf("jz .L%zu\n", label_id);
   } statement {
     printf("jmp .L%zu\n", label_id - 1);
-    printf(".L%zu\n", label_id++);
+    printf(".L%zu:\n", label_id++);
   }
+| SWITCH rvalue statement
+| GOTO rvalue SEMICOLON
+| opt_rvalue SEMICOLON
 ;
 
 auto_identifiers:
   ID {
-    stack_offset += 8;
-    printf("sub rsp, 8\n");
-    printf("mov qword ptr [rbp-%zu], 0\n", stack_offset);
+    stack_offset += 4;
+    printf("sub esp, 4\n");
+    printf("mov word ptr [ebp-%zu], 0\n", stack_offset);
     free($1); 
   }
 | auto_identifiers COMMA ID {
-    stack_offset += 8;
-    printf("sub rsp, 8\n");
-    printf("mov qword ptr [rbp-%zu], 0\n", stack_offset);
+    stack_offset += 4;
+    printf("sub esp, 4\n");
+    printf("mov word ptr [ebp-%zu], 0\n", stack_offset);
     free($3);
   }
 | ID COLON statement
@@ -189,27 +202,22 @@ binary:
 | DIV
 ;
 
-value:
-  constant
-| ID
-;
-
 value_list:
   value
 | value_list COMMA value
 ;
 
 lvalue:
-  ID
-| ASTERISK rvalue
+  ID { printf("mov eax, [%s]\n", $1); }
+| ASTERISK rvalue { printf("mov eax, [eax]\n"); free($2); }
 | rvalue LBRACKET rvalue RBRACKET
 ;
 
 rvalue:
-  LPAREN rvalue RPAREN
-| lvalue
+  LPAREN rvalue RPAREN { $$ = $2; }
+| lvalue { $$ = $1; }
 | constant { printf("mov eax, %s\n", $1); }
-| AMPERSAND lvalue
+| AMPERSAND lvalue { printf("lea eax, []\n"); }
 ;
 
 /* Optional */
@@ -232,6 +240,16 @@ opt_constant:
 opt_binary:
   /* Empty */
 | binary
+;
+
+opt_else:
+  /* Empty */
+| ELSE statement
+;
+
+opt_rvalue:
+  /* Empty */
+| rvalue
 ;
 
 %%
