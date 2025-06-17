@@ -68,6 +68,8 @@ size_t label_id = 0;
 
 %start program
 
+%locations
+
 %%
 
 program:
@@ -95,8 +97,8 @@ definition:
     printf("  push ebp\n");
     printf("  mov ebp, esp\n");
     stack_offset = 0;
-    free($1);
     scope_create();
+    free($1);
   } statement {
     printf("  mov esp, ebp\n");
     printf("  pop ebp\n");
@@ -117,7 +119,6 @@ constant:
 | STRING
 ;
 
-
 value:
   constant
 | ID
@@ -125,9 +126,7 @@ value:
 
 statement:
   /* Empty */
-| AUTO auto_identifiers SEMICOLON statement {
-    
-  }
+| AUTO auto_identifiers SEMICOLON statement
 | EXTRN extrn_identifiers SEMICOLON statement
 | ID COLON statement
 | CASE constant COLON statement
@@ -223,12 +222,14 @@ value_list:
 
 lvalue:
   ID {
-    Symbol *symbol = symbol_find($1);
+    Symbol *symbol = symbol_find_global($1);
     if (symbol == NULL) {
-      yyerror("Undefined variable");
+      fprintf(stderr, "Error: %d:%d: Undefined variable %s\n", @1.first_line, @1.first_column, $1);
+      free($1);
       YYERROR;
     }
     printf("  lea eax, [ebp - 4]\n");
+    free($1);
   }
 | ASTERISK rvalue
 | rvalue LBRACKET rvalue RBRACKET {
@@ -243,9 +244,8 @@ rvalue:
   LPAREN rvalue RPAREN
 | lvalue
 | constant             { printf("  mov eax, %s\n", $1); }
-| lvalue ASSIGN {
+| lvalue ASSIGN rvalue {
     printf("  push eax\n");
-  } rvalue {
     printf("  pop ecx\n");
     printf("  mov [ecx], eax\n");
   }
@@ -302,7 +302,7 @@ opt_rvalue:
 %%
 
 void yyerror(const char *s) {
-  fprintf(stderr, "Error: %d:%d: %s '%s'\n", yylineno, yycolumn, s, yytext);
+  fprintf(stderr, "Error: %d:%d: %s\n", yylineno, yycolumn, s);
 }
 
 int main(void) {
