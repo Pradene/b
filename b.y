@@ -33,7 +33,7 @@ size_t label_id = 0;
 %token BANG
 %token QUESTION
 %token COLON
-%token ASSIGNMENT
+%token ASSIGN
 %token OPERATOR
 %token AMPERSAND
 %token ASTERISK
@@ -64,6 +64,7 @@ size_t label_id = 0;
 %type <string> constant
 
 %type <string> lvalue rvalue
+%type <string> inc_dec
 
 %start program
 
@@ -90,13 +91,13 @@ definition:
     printf(".text\n");
     printf(".globl %s\n", $1);
     printf("%s:\n", $1);
+    printf("  .long %s + 4\n", $1);
     printf("  push ebp\n");
     printf("  mov ebp, esp\n");
     stack_offset = 0;
     free($1);
-  } LBRACE {
     scope_create();
-  } statement RBRACE {
+  } statement {
     printf("  mov esp, ebp\n");
     printf("  pop ebp\n");
     printf("  ret\n");
@@ -110,6 +111,13 @@ parameters:
 | parameters COMMA ID { $$ = $1 + 1; free($3); }
 ;
 
+constant:
+  NUMBER
+| CHAR
+| STRING
+;
+
+
 value:
   constant
 | ID
@@ -117,18 +125,21 @@ value:
 
 statement:
   /* Empty */
-| AUTO auto_identifiers SEMICOLON statement
+| AUTO auto_identifiers SEMICOLON statement {
+    
+  }
 | EXTRN extrn_identifiers SEMICOLON statement
 | ID COLON statement
 | CASE constant COLON statement
 | LBRACE {
     scope_create();
-  } statement RBRACE {
+  } statements RBRACE {
     scope_destroy();
   }
-| IF LPAREN rvalue RPAREN statement opt_else
+| IF LPAREN rvalue RPAREN statement else
 | WHILE {
-    printf(".L%zu:\n", label_id++);
+    printf(".L%zu:\n", label_id);
+    printf("  .long .L%zu + 4\n", label_id++);
   } LPAREN rvalue RPAREN {
     printf("  test eax, eax\n");
     printf("  jz .L%zu\n", label_id);
@@ -142,17 +153,23 @@ statement:
 | opt_rvalue SEMICOLON
 ;
 
+statements:
+  /* Empty */
+| statements statement
+;
+
 auto_identifiers:
   ID {
     stack_offset += 4;
     printf("  sub esp, 4\n");
-    printf("  mov word ptr [ebp-%zu], 0\n", stack_offset);
-    free($1); 
+    printf("  mov WORD PTR [ebp - %zu], 0\n", stack_offset);
+    symbol_add($1, stack_offset, yylineno, yycolumn);
+    free($1);
   }
 | auto_identifiers COMMA ID {
     stack_offset += 4;
     printf("  sub esp, 4\n");
-    printf("  mov word ptr [ebp-%zu], 0\n", stack_offset);
+    printf("  mov WORD PTR [ebp - %zu], 0\n", stack_offset);
     free($3);
   }
 | ID COLON statement
@@ -165,19 +182,15 @@ extrn_identifiers:
 | extrn_identifiers COMMA ID { free($3); }
 ;
 
-constant:
-  NUMBER
-| CHAR
-| STRING
+else:
+  /* Empty */
+| ELSE statement
 ;
 
-assigment:
-  ASSIGNMENT opt_binary
-;
 
 inc_dec:
-  INCREMENT
-| DECREMENT
+  INCREMENT { $$ = strdup("add"); }
+| DECREMENT { $$ = strdup("sub"); }
 ;
 
 unary:
@@ -209,16 +222,53 @@ value_list:
 ;
 
 lvalue:
-  ID              { printf("  mov eax, [%s]\n", $1); }
-| ASTERISK rvalue { printf("  mov eax, [eax]\n"); free($2); }
-| rvalue LBRACKET rvalue RBRACKET
+  ID {
+    Symbol *symbol = symbol_find($1);
+    if (symbol == NULL) {
+      yyerror("Undefined variable");
+      YYERROR;
+    }
+    printf("  lea eax, [ebp - 4]\n");
+  }
+| ASTERISK rvalue
+| rvalue LBRACKET rvalue RBRACKET {
+    printf("  push eax\n");      // Save base address
+    printf("  imul eax, 4\n");   // Multiply by element size (4 bytes for int)
+    printf("  pop ecx\n");       // Retrieve base address
+    printf("  add eax, ecx\n");  // eax = base + index*4
+  }
 ;
 
 rvalue:
-  LPAREN rvalue RPAREN { $$ = $2; }
-| lvalue               { $$ = $1; }
+  LPAREN rvalue RPAREN
+| lvalue
 | constant             { printf("  mov eax, %s\n", $1); }
+| lvalue ASSIGN {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  mov [ecx], eax\n");
+  }
+| inc_dec lvalue       { printf("\n"); }
+| lvalue inc_dec       { printf("  %s eax, 1\n", $2); free($2); }
+| unary rvalue
 | AMPERSAND lvalue     { printf("  lea eax, []\n"); }
+| rvalue {
+    printf("  push eax\n");
+  } binary rvalue {
+    printf("  pop ecx\n");
+  }
+| rvalue QUESTION {
+    printf("  test eax, eax\n");
+    printf("  jz .L%zu\n", label_id);
+  } rvalue {
+    printf("  jmp .L%zu\n", label_id + 1);
+  } COLON {
+    printf(".L%zu\n", label_id++);
+  } rvalue {
+    printf(".L%zu\n", label_id++);
+  }
+| rvalue LPAREN opt_rvalue RPAREN
 ;
 
 /* Optional */
@@ -243,10 +293,6 @@ opt_binary:
 | binary
 ;
 
-opt_else:
-  /* Empty */
-| ELSE statement
-;
 
 opt_rvalue:
   /* Empty */
@@ -256,8 +302,7 @@ opt_rvalue:
 %%
 
 void yyerror(const char *s) {
-  (void)s;
-  fprintf(stderr, "Error: %d:%d: Unexpected token '%s'\n", yylineno, yycolumn, yytext);
+  fprintf(stderr, "Error: %d:%d: %s '%s'\n", yylineno, yycolumn, s, yytext);
 }
 
 int main(void) {

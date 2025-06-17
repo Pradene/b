@@ -1,9 +1,5 @@
-a;
-b;
-c;
-
 main(argc, argv) {
-  extrn putchar;
-  auto s1, s2;
+  auto i;
+  i = 0;
   return 0;
 }

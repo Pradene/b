@@ -10,13 +10,14 @@ typedef struct Scope Scope;
 
 typedef struct {
   size_t line;
-  size_t offset;
+  size_t column;
 } Positon;
 
 typedef struct {
   char *name;
   Positon pos;
   Scope *scope;
+  size_t offset;
 } Symbol;
 
 // Scope struct to store all variables defined inside of it
@@ -63,7 +64,8 @@ void scope_destroy() {
 }
 
 // Add a variable inside the scope
-Symbol *symbol_add(char *name, Positon pos) {
+Symbol *symbol_add(char *name, size_t stack_offset, size_t line,
+                   size_t column) {
   if (ht_get(current_scope->symbols, name) != NULL) {
     return NULL;
   }
@@ -74,7 +76,9 @@ Symbol *symbol_add(char *name, Positon pos) {
   }
   symbol->name = strdup(name);
   symbol->scope = current_scope;
-  symbol->pos = pos;
+  symbol->pos.line = line;
+  symbol->pos.column = column;
+  symbol->offset = stack_offset;
 
   ht_set(current_scope->symbols, name, symbol);
   return symbol;

@@ -35,7 +35,7 @@ goto        { return GOTO; }
 "!"         { return BANG; }
 "?"         { return QUESTION; }
 ":"         { return COLON; }
-"="         { return ASSIGNMENT; }
+"="         { return ASSIGN; }
 
 "&"         { return AMPERSAND; }
 "*"         { return ASTERISK; }
