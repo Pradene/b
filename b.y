@@ -174,8 +174,14 @@ auto_identifiers:
 ;
 
 extrn_identifiers:
-  ID                         { free($1); }
-| extrn_identifiers COMMA ID { free($3); }
+  ID                         {
+    symbol_add($1, stack_offset, yylineno, yycolumn);
+    free($1);
+  }
+| extrn_identifiers COMMA ID {
+    symbol_add($3, stack_offset, yylineno, yycolumn);
+    free($3);
+  }
 ;
 
 else:
@@ -276,7 +282,8 @@ rvalue:
   } rvalue {
     printf(".L%zu\n", label_id++);
   }
-| rvalue LPAREN opt_rvalue RPAREN {
+| rvalue LPAREN opt_lst_rvalue RPAREN {
+    
   }
 ;
 
@@ -302,6 +309,16 @@ opt_paren_rvalue:
 | LPAREN rvalue RPAREN
 ;
 
+opt_lst_rvalue:
+  /* Empty */
+| lst_rvalue
+;
+
+lst_rvalue:
+  rvalue
+| lst_rvalue COMMA rvalue
+;
+
 opt_rvalue:
   /* Empty */
 | rvalue
@@ -310,7 +327,7 @@ opt_rvalue:
 %%
 
 void yyerror(const char *s) {
-  fprintf(stderr, "Error: %d:%d: %s\n", yylineno, yycolumn, s);
+  fprintf(stderr, "Error: %d:%d: %s '%s'\n", yylineno, yycolumn, s, yytext);
 }
 
 int main(void) {
