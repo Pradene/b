@@ -248,9 +248,18 @@ rvalue:
     printf("  pop ecx\n");
     printf("  mov [ecx], eax\n");
   }
-| inc_dec lvalue       { printf("\n"); free($1); }
-| lvalue inc_dec       { printf("  %s eax, 1\n", $2); free($2); }
-| unary rvalue         {  }
+| unary rvalue         {}
+| inc_dec lvalue {
+    printf("  %s DWORD PTR [eax], 1\n", $1);
+    printf("  mov eax, DWORD PTR [eax]\n");
+    free($1);
+  }
+| lvalue inc_dec {
+    printf("  mov ecx, DWORD PTR [eax]\n");
+    printf("  %s DWORD PTR [eax], 1\n", $2);
+    printf("  mov eax, ecx\n");
+    free($2);
+  }
 | AMPERSAND lvalue     { printf("  lea eax, []\n"); }
 | rvalue {
     printf("  push eax\n");
