@@ -228,8 +228,9 @@ lvalue:
     free($1);
   }
 | ASTERISK rvalue
-| rvalue LBRACKET rvalue RBRACKET {
+| rvalue {
     printf("  push eax\n");      // Save base address
+  } LBRACKET rvalue RBRACKET {
     printf("  imul eax, 4\n");   // Multiply by element size (4 bytes for int)
     printf("  pop ecx\n");       // Retrieve base address
     printf("  add eax, ecx\n");  // eax = base + index*4
@@ -240,8 +241,9 @@ rvalue:
   LPAREN rvalue RPAREN
 | lvalue
 | constant             { printf("  mov eax, %s\n", $1); free($1); }
-| lvalue ASSIGN rvalue {
+| lvalue ASSIGN {
     printf("  push eax\n");
+  } rvalue {
     printf("  pop ecx\n");
     printf("  mov [ecx], eax\n");
   }
