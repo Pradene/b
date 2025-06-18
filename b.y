@@ -13,7 +13,6 @@ extern int yylineno;
 extern int yycolumn;
 extern char *yytext;
 
-size_t stack_offset = 0;
 size_t label_id = 0;
 %}
 
@@ -85,10 +84,9 @@ definition:
     printf(".text\n");
     printf(".globl %s\n", $1);
     printf("%s:\n", $1);
-    printf("  .long %s + 4\n", $1);
+    printf("  .long \"%s\" + 4\n", $1);
     printf("  push ebp\n");
     printf("  mov ebp, esp\n");
-    stack_offset = 0;
     free($1);
   } statement {
     printf("  mov esp, ebp\n");
@@ -159,28 +157,26 @@ statements:
 
 auto_identifiers:
   ID {
-    stack_offset += 4;
+    symbol_add($1, AUTOMATIC);
     printf("  sub esp, 4\n");
-    printf("  mov WORD PTR [ebp - %zu], 0\n", stack_offset);
-    symbol_add($1, AUTOMATIC, stack_offset, yylineno, yycolumn);
+    printf("  mov WORD PTR [ebp - %zu], 0\n", current_scope->offset);
     free($1);
   }
 | auto_identifiers COMMA ID {
-    stack_offset += 4;
+    symbol_add($3, AUTOMATIC);
     printf("  sub esp, 4\n");
-    printf("  mov WORD PTR [ebp - %zu], 0\n", stack_offset);
-    symbol_add($3, AUTOMATIC, stack_offset, yylineno, yycolumn);
+    printf("  mov WORD PTR [ebp - %zu], 0\n", current_scope->offset);
     free($3);
   }
 ;
 
 extrn_identifiers:
   ID                         {
-    symbol_add($1, EXTERNAL, stack_offset, yylineno, yycolumn);
+    symbol_add($1, EXTERNAL);
     free($1);
   }
 | extrn_identifiers COMMA ID {
-    symbol_add($3, EXTERNAL, stack_offset, yylineno, yycolumn);
+    symbol_add($3, EXTERNAL);
     free($3);
   }
 ;

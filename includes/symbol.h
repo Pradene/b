@@ -8,16 +8,10 @@
 
 typedef struct Scope Scope;
 
-typedef struct {
-  size_t line;
-  size_t column;
-} Positon;
-
 typedef enum { EXTERNAL, AUTOMATIC, INTERNAL } Storage;
 
 typedef struct {
   char *name;
-  Positon pos;
   Scope *scope;
   size_t offset;
   Storage storage;
@@ -26,6 +20,7 @@ typedef struct {
 // Scope struct to store all variables defined inside of it
 // So we can check if a variable is defined when accessing value
 struct Scope {
+  size_t offset;
   size_t depth;
   ht *symbols;
   Scope *parent;
@@ -40,6 +35,7 @@ void scope_create() {
   if (scope == NULL) {
     return;
   }
+  scope->offset = 0;
   scope->depth = current_scope ? current_scope->depth + 1 : 0;
   scope->symbols = ht_create();
   scope->parent = current_scope;
@@ -67,8 +63,7 @@ void scope_destroy() {
 }
 
 // Add a variable inside the scope
-Symbol *symbol_add(char *name, Storage storage, size_t stack_offset,
-                   size_t line, size_t column) {
+Symbol *symbol_add(char *name, Storage storage) {
   if (ht_get(current_scope->symbols, name) != NULL) {
     return NULL;
   }
@@ -77,11 +72,16 @@ Symbol *symbol_add(char *name, Storage storage, size_t stack_offset,
   if (symbol == NULL) {
     return NULL;
   }
+
+  if (storage == AUTOMATIC) {
+    current_scope->offset += 4;
+    symbol->offset = current_scope->offset;
+  } else {
+    symbol->offset = 0;
+  }
+
   symbol->name = strdup(name);
   symbol->scope = current_scope;
-  symbol->pos.line = line;
-  symbol->pos.column = column;
-  symbol->offset = stack_offset;
   symbol->storage = storage;
 
   ht_set(current_scope->symbols, name, symbol);
