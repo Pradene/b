@@ -7,6 +7,7 @@
 
 int yylex(void);
 void yyerror(const char *s);
+void yylex_destroy(void);
 
 extern int yylineno;
 extern int yycolumn;
@@ -22,9 +23,7 @@ size_t label_id = 0;
 }
 
 %token <string> ID NUMBER STRING CHAR
-%token AUTO
-%token EXTRN
-%token RETURN
+%token AUTO EXTRN RETURN SWITCH CASE IF ELSE WHILE BREAK GOTO
 %token SEMICOLON
 %token LPAREN RPAREN
 %token LBRACKET RBRACKET
@@ -34,7 +33,6 @@ size_t label_id = 0;
 %token QUESTION
 %token COLON
 %token ASSIGN
-%token OPERATOR
 %token AMPERSAND
 %token ASTERISK
 %token GTE
@@ -52,18 +50,9 @@ size_t label_id = 0;
 %token LSHIFT
 %token INCREMENT
 %token DECREMENT
-%token SWITCH
-%token CASE
-%token IF
-%token ELSE
-%token WHILE
-%token BREAK
-%token GOTO
 
-%type <number> parameters 
 %type <string> constant
 
-%type <string> lvalue rvalue
 %type <string> inc_dec
 
 %start program
@@ -88,7 +77,9 @@ definitions:
 ;
 
 definition:
-  ID opt_array opt_value_list SEMICOLON
+  ID opt_array opt_value_list SEMICOLON {
+    free($1);
+  }
 | ID LPAREN parameters RPAREN {
     printf(".text\n");
     printf(".globl %s\n", $1);
@@ -97,39 +88,41 @@ definition:
     printf("  push ebp\n");
     printf("  mov ebp, esp\n");
     stack_offset = 0;
-    scope_create();
     free($1);
   } statement {
     printf("  mov esp, ebp\n");
     printf("  pop ebp\n");
     printf("  ret\n");
-    scope_destroy();
   }
 ;
 
 parameters:
-  /* Empty */         { $$ = 0; }
-| ID                  { $$ = 1; free($1); }
-| parameters COMMA ID { $$ = $1 + 1; free($3); }
+  /* Empty */
+| ID                  { free($1); }
+| parameters COMMA ID { free($3); }
 ;
 
 constant:
-  NUMBER
-| CHAR
-| STRING
+  NUMBER { $$ = $1; }
+| CHAR   { $$ = $1; }
+| STRING { $$ = $1; }
 ;
 
 value:
-  constant
-| ID
+  constant  { free($1); }
+| ID        { free($1); }
 ;
 
 statement:
   /* Empty */
 | AUTO auto_identifiers SEMICOLON statement
 | EXTRN extrn_identifiers SEMICOLON statement
-| ID COLON statement
-| CASE constant COLON statement
+| ID COLON statement {
+    free($1);
+  }
+| CASE constant COLON statement {
+    free($2);
+  }
 | LBRACE {
     scope_create();
   } statements RBRACE {
@@ -171,9 +164,12 @@ auto_identifiers:
     printf("  mov WORD PTR [ebp - %zu], 0\n", stack_offset);
     free($3);
   }
-| ID COLON statement
-| CASE constant COLON statement
-| LBRACKET  RBRACKET
+| ID COLON statement {
+    free($1);
+  }
+| CASE constant COLON statement {
+    free($2);
+  }
 ;
 
 extrn_identifiers:
@@ -243,15 +239,15 @@ lvalue:
 rvalue:
   LPAREN rvalue RPAREN
 | lvalue
-| constant             { printf("  mov eax, %s\n", $1); }
+| constant             { printf("  mov eax, %s\n", $1); free($1); }
 | lvalue ASSIGN rvalue {
     printf("  push eax\n");
     printf("  pop ecx\n");
     printf("  mov [ecx], eax\n");
   }
-| inc_dec lvalue       { printf("\n"); }
+| inc_dec lvalue       { printf("\n"); free($1); }
 | lvalue inc_dec       { printf("  %s eax, 1\n", $2); free($2); }
-| unary rvalue
+| unary rvalue         {  }
 | AMPERSAND lvalue     { printf("  lea eax, []\n"); }
 | rvalue {
     printf("  push eax\n");
@@ -268,7 +264,8 @@ rvalue:
   } rvalue {
     printf(".L%zu\n", label_id++);
   }
-| rvalue LPAREN opt_rvalue RPAREN
+| rvalue LPAREN opt_rvalue RPAREN {
+  }
 ;
 
 /* Optional */
@@ -285,14 +282,8 @@ opt_value_list:
 
 opt_constant:
   /* Empty */
-| constant
+| constant { free($1); }
 ;
-
-opt_binary:
-  /* Empty */
-| binary
-;
-
 
 opt_rvalue:
   /* Empty */
@@ -306,5 +297,7 @@ void yyerror(const char *s) {
 }
 
 int main(void) {
-  return yyparse();
+  int result = yyparse();
+  yylex_destroy();
+  return result;
 }
