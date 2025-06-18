@@ -52,8 +52,9 @@ size_t label_id = 0;
 %token DECREMENT
 
 %type <string> constant
-
 %type <string> inc_dec
+%type <number> opt_lst_rvalue
+%type <number> lst_rvalue
 
 %start program
 
@@ -128,7 +129,9 @@ statement:
   } statements RBRACE {
     scope_destroy();
   }
-| IF LPAREN rvalue RPAREN statement else
+| IF LPAREN rvalue RPAREN statement else {
+
+  }
 | WHILE {
     printf(".L%zu:\n", label_id);
     printf("  .long .L%zu + 4\n", label_id++);
@@ -139,8 +142,12 @@ statement:
     printf("  jmp .L%zu\n", label_id - 1);
     printf(".L%zu:\n", label_id++);
   }
-| SWITCH rvalue statement
-| GOTO rvalue SEMICOLON
+| SWITCH rvalue statement {
+
+  }
+| GOTO rvalue SEMICOLON {
+
+  }
 | RETURN opt_paren_rvalue SEMICOLON
 | opt_rvalue SEMICOLON
 ;
@@ -155,31 +162,25 @@ auto_identifiers:
     stack_offset += 4;
     printf("  sub esp, 4\n");
     printf("  mov WORD PTR [ebp - %zu], 0\n", stack_offset);
-    symbol_add($1, stack_offset, yylineno, yycolumn);
+    symbol_add($1, AUTOMATIC, stack_offset, yylineno, yycolumn);
     free($1);
   }
 | auto_identifiers COMMA ID {
     stack_offset += 4;
     printf("  sub esp, 4\n");
     printf("  mov WORD PTR [ebp - %zu], 0\n", stack_offset);
-    symbol_add($3, stack_offset, yylineno, yycolumn);
+    symbol_add($3, AUTOMATIC, stack_offset, yylineno, yycolumn);
     free($3);
-  }
-| ID COLON statement {
-    free($1);
-  }
-| CASE constant COLON statement {
-    free($2);
   }
 ;
 
 extrn_identifiers:
   ID                         {
-    symbol_add($1, stack_offset, yylineno, yycolumn);
+    symbol_add($1, EXTERNAL, stack_offset, yylineno, yycolumn);
     free($1);
   }
 | extrn_identifiers COMMA ID {
-    symbol_add($3, stack_offset, yylineno, yycolumn);
+    symbol_add($3, EXTERNAL, stack_offset, yylineno, yycolumn);
     free($3);
   }
 ;
@@ -231,7 +232,12 @@ lvalue:
       free($1);
       YYERROR;
     }
-    printf("  lea eax, [ebp - %zu]\n", symbol->offset);
+
+    if (symbol->storage == AUTOMATIC) {
+      printf("  lea eax, [ebp - %zu]\n", symbol->offset);
+    } else {
+      printf("  lea eax, \"%s\"\n", symbol->name);
+    }
     free($1);
   }
 | ASTERISK rvalue
@@ -283,7 +289,9 @@ rvalue:
     printf(".L%zu\n", label_id++);
   }
 | rvalue LPAREN opt_lst_rvalue RPAREN {
-    
+    printf("  pop eax\n");
+    printf("  call eax\n");
+    printf("  add esp, %d\n", $3 * 4);
   }
 ;
 
@@ -310,13 +318,13 @@ opt_paren_rvalue:
 ;
 
 opt_lst_rvalue:
-  /* Empty */
-| lst_rvalue
+  /* Empty */ { $$ = 0; }
+| lst_rvalue  { $$ = $1; }
 ;
 
 lst_rvalue:
-  rvalue
-| lst_rvalue COMMA rvalue
+  rvalue      { $$ = 1; }
+| lst_rvalue COMMA rvalue { $$ = $1 + 1; }
 ;
 
 opt_rvalue:
