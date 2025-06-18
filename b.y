@@ -127,8 +127,14 @@ statement:
   } statements RBRACE {
     scope_destroy();
   }
-| IF LPAREN rvalue RPAREN statement else {
-
+| IF LPAREN rvalue {
+    printf("  test eax, eax\n");
+    printf("  jz .L%zu\n", label_id);
+  } RPAREN statement {
+    printf("  jmp .L%zu\n", ++label_id);
+    printf(".L%zu:\n", label_id - 1);
+  } else {
+    printf(".L%zu:\n", label_id++);
   }
 | WHILE {
     printf(".L%zu:\n", label_id);
@@ -287,7 +293,9 @@ rvalue:
 | rvalue LPAREN opt_lst_rvalue RPAREN {
     printf("  pop eax\n");
     printf("  call eax\n");
-    printf("  add esp, %d\n", $3 * 4);
+    if ($3 > 0) {
+      printf("  add esp, %d\n", $3 * 4);
+    }
   }
 ;
 
@@ -319,8 +327,14 @@ opt_lst_rvalue:
 ;
 
 lst_rvalue:
-  rvalue      { $$ = 1; }
-| lst_rvalue COMMA rvalue { $$ = $1 + 1; }
+  rvalue      {
+    printf("  push eax\n");
+    $$ = 1;
+  }
+| lst_rvalue COMMA rvalue {
+    printf("  push eax\n");
+    $$ = $1 + 1;
+  }
 ;
 
 opt_rvalue:
