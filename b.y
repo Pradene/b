@@ -162,6 +162,7 @@ auto_identifiers:
     stack_offset += 4;
     printf("  sub esp, 4\n");
     printf("  mov WORD PTR [ebp - %zu], 0\n", stack_offset);
+    symbol_add($3, stack_offset, yylineno, yycolumn);
     free($3);
   }
 | ID COLON statement {
@@ -224,7 +225,7 @@ lvalue:
       free($1);
       YYERROR;
     }
-    printf("  lea eax, [ebp - 4]\n");
+    printf("  lea eax, [ebp - %zu]\n", symbol->offset);
     free($1);
   }
 | ASTERISK rvalue
