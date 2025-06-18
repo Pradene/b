@@ -141,7 +141,7 @@ statement:
   }
 | SWITCH rvalue statement
 | GOTO rvalue SEMICOLON
-| RETURN opt_rvalue SEMICOLON
+| RETURN opt_paren_rvalue SEMICOLON
 | opt_rvalue SEMICOLON
 ;
 
@@ -286,6 +286,11 @@ opt_value_list:
 opt_constant:
   /* Empty */
 | constant { free($1); }
+;
+
+opt_paren_rvalue:
+  /* Empty */
+| LPAREN rvalue RPAREN
 ;
 
 opt_rvalue:
