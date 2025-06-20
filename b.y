@@ -81,6 +81,7 @@ definition:
     free($1);
   }
 | ID LPAREN parameters RPAREN {
+    symbol_add($1, EXTERNAL);
     printf(".text\n");
     printf(".globl %s\n", $1);
     printf("%s:\n", $1);
@@ -97,14 +98,31 @@ definition:
 
 parameters:
   /* Empty */
-| ID                  { free($1); }
-| parameters COMMA ID { free($3); }
+| ID                  {
+    symbol_add($1, INTERNAL);
+    free($1);
+  }
+| parameters COMMA ID {
+    symbol_add($3, INTERNAL);
+    free($3);
+  }
 ;
 
 constant:
   NUMBER { $$ = $1; }
 | CHAR   { $$ = $1; }
-| STRING { $$ = $1; }
+| STRING {
+  printf(".section .rodata\n");
+  printf(".L%zu:\n", label_id);
+  printf("  .long .L%zu + 4\n", label_id);
+  printf("  .string %s\n", $1);
+  printf(".text\n");
+
+  char* label = malloc(16);
+  sprintf(label, ".L%zu", label_id++);
+  $$ = label;
+  free($1);
+}
 ;
 
 value:
@@ -165,13 +183,13 @@ auto_identifiers:
   ID {
     symbol_add($1, AUTOMATIC);
     printf("  sub esp, 4\n");
-    printf("  mov WORD PTR [ebp - %zu], 0\n", current_scope->offset);
+    printf("  mov WORD PTR [ebp - %zu], 0\n", current_scope->local_offset);
     free($1);
   }
 | auto_identifiers COMMA ID {
     symbol_add($3, AUTOMATIC);
     printf("  sub esp, 4\n");
-    printf("  mov WORD PTR [ebp - %zu], 0\n", current_scope->offset);
+    printf("  mov WORD PTR [ebp - %zu], 0\n", current_scope->local_offset);
     free($3);
   }
 ;
@@ -237,6 +255,8 @@ lvalue:
 
     if (symbol->storage == AUTOMATIC) {
       printf("  lea eax, [ebp - %zu]\n", symbol->offset);
+    } else if (symbol->storage == INTERNAL) {
+      printf("  lea eax, [ebp + %zu]\n", symbol->offset);
     } else {
       printf("  lea eax, \"%s\"\n", symbol->name);
     }
@@ -254,7 +274,7 @@ lvalue:
 
 rvalue:
   LPAREN rvalue RPAREN
-| lvalue
+| lvalue { printf("  mov eax, [eax]\n"); }
 | constant             { printf("  mov eax, %s\n", $1); free($1); }
 | lvalue ASSIGN {
     printf("  push eax\n");

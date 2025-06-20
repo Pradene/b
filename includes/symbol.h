@@ -20,10 +20,11 @@ typedef struct {
 // Scope struct to store all variables defined inside of it
 // So we can check if a variable is defined when accessing value
 struct Scope {
-  size_t offset;
+  Scope *parent;
+  size_t local_offset;
+  size_t param_offset;
   size_t depth;
   ht *symbols;
-  Scope *parent;
 };
 
 Scope *current_scope = NULL;
@@ -35,7 +36,8 @@ void scope_create() {
   if (scope == NULL) {
     return;
   }
-  scope->offset = 0;
+  scope->local_offset = 0;
+  scope->param_offset = 0;
   scope->depth = current_scope ? current_scope->depth + 1 : 0;
   scope->symbols = ht_create();
   scope->parent = current_scope;
@@ -74,8 +76,11 @@ Symbol *symbol_add(char *name, Storage storage) {
   }
 
   if (storage == AUTOMATIC) {
-    current_scope->offset += 4;
-    symbol->offset = current_scope->offset;
+    current_scope->local_offset += 4;
+    symbol->offset = current_scope->local_offset;
+  } else if (storage == INTERNAL) {
+    current_scope->param_offset += 4;
+    symbol->offset = current_scope->param_offset;
   } else {
     symbol->offset = 0;
   }

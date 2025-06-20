@@ -10,7 +10,7 @@ int yycolumn = 0;
 %}
 
 NUMBER      [0-9]+(\.[0-9]+)?
-ID          [a-zA-Z][a-zA-Z0-9]*
+ID          [a-zA-Z_][a-zA-Z0-9_]*
 
 %option noyywrap
 %option noinput
