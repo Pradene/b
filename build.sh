@@ -11,5 +11,5 @@ do
   rm "$(eval echo \$S$i)"
 done
 
-ld -m elf_i386 $(eval echo $(seq -f '$O%.0f' -s ' ' 1 $#)) brt0.o
+ld -m elf_i386 --rpath=/lib32/ --dynamic-linker=/lib32/ld-linux.so.2 -lc $(eval echo $(seq -f '$O%.0f' -s ' ' 1 $#)) brt0.o
 rm $(eval echo $(seq -f '$O%.0f' -s ' ' 1 $#))

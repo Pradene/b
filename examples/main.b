@@ -1,10 +1,11 @@
 char(s, i) {
-  return (s[i]);
+  return (i);
 }
 
 main() {
-  auto i, s;
+  extrn putchar;
+  auto i, s, c;
   i = 0;
   s = "hello world\n";
-  return (0);
+  return (char(s, i));
 }

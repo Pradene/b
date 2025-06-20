@@ -80,8 +80,9 @@ definition:
   ID opt_array opt_value_list SEMICOLON {
     free($1);
   }
-| ID LPAREN parameters RPAREN {
+| ID LPAREN {
     symbol_add($1, EXTERNAL);
+    scope_create();
     printf(".text\n");
     printf(".globl %s\n", $1);
     printf("%s:\n", $1);
@@ -89,10 +90,11 @@ definition:
     printf("  push ebp\n");
     printf("  mov ebp, esp\n");
     free($1);
-  } statement {
+  } parameters RPAREN statement {
     printf("  mov esp, ebp\n");
     printf("  pop ebp\n");
     printf("  ret\n");
+    scope_destroy();
   }
 ;
 
@@ -114,7 +116,6 @@ constant:
 | STRING {
   printf(".section .rodata\n");
   printf(".L%zu:\n", label_id);
-  printf("  .long .L%zu + 4\n", label_id);
   printf("  .string %s\n", $1);
   printf(".text\n");
 
@@ -140,11 +141,7 @@ statement:
 | CASE constant COLON statement {
     free($2);
   }
-| LBRACE {
-    scope_create();
-  } statements RBRACE {
-    scope_destroy();
-  }
+| LBRACE statements RBRACE
 | IF LPAREN rvalue {
     printf("  test eax, eax\n");
     printf("  jz .L%zu\n", label_id);
@@ -183,13 +180,13 @@ auto_identifiers:
   ID {
     symbol_add($1, AUTOMATIC);
     printf("  sub esp, 4\n");
-    printf("  mov WORD PTR [ebp - %zu], 0\n", current_scope->local_offset);
+    printf("  mov DWORD PTR [ebp - %zu], 0\n", current_scope->local_offset);
     free($1);
   }
 | auto_identifiers COMMA ID {
     symbol_add($3, AUTOMATIC);
     printf("  sub esp, 4\n");
-    printf("  mov WORD PTR [ebp - %zu], 0\n", current_scope->local_offset);
+    printf("  mov DWORD PTR [ebp - %zu], 0\n", current_scope->local_offset);
     free($3);
   }
 ;
@@ -258,17 +255,16 @@ lvalue:
     } else if (symbol->storage == INTERNAL) {
       printf("  lea eax, [ebp + %zu]\n", symbol->offset);
     } else {
-      printf("  lea eax, \"%s\"\n", symbol->name);
+      printf("  mov eax, %s\n", symbol->name);
     }
     free($1);
   }
 | ASTERISK rvalue
 | rvalue {
-    printf("  push eax\n");      // Save base address
+    printf("  push eax\n");
   } LBRACKET rvalue RBRACKET {
-    printf("  imul eax, 4\n");   // Multiply by element size (4 bytes for int)
-    printf("  pop ecx\n");       // Retrieve base address
-    printf("  add eax, ecx\n");  // eax = base + index*4
+    printf("  pop ecx\n");
+    printf("  add eax, ecx\n");
   }
 ;
 
@@ -310,11 +306,20 @@ rvalue:
   } rvalue {
     printf(".L%zu\n", label_id++);
   }
-| rvalue LPAREN opt_lst_rvalue RPAREN {
-    printf("  pop eax\n");
-    printf("  call eax\n");
+| ID LPAREN opt_lst_rvalue RPAREN {  // Direct function calls
+    printf("  call %s\n", $1);
     if ($3 > 0) {
       printf("  add esp, %d\n", $3 * 4);
+    }
+    free($1);
+  }
+| rvalue {
+    printf("  mov ebx, eax\n");
+  } LPAREN opt_lst_rvalue RPAREN {
+    printf("  mov eax, ebx\n");
+    printf("  call eax\n");
+    if ($4 > 0) {
+      printf("  add esp, %d\n", $4 * 4);
     }
   }
 ;
@@ -343,12 +348,15 @@ opt_paren_rvalue:
 
 opt_lst_rvalue:
   /* Empty */ { $$ = 0; }
-| lst_rvalue  { $$ = $1; }
+| lst_rvalue  {
+    printf("  push ebx\n");
+    $$ = $1;
+  }
 ;
 
 lst_rvalue:
   rvalue      {
-    printf("  push eax\n");
+    printf("  mov ebx, eax\n");
     $$ = 1;
   }
 | lst_rvalue COMMA rvalue {

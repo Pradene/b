@@ -37,7 +37,7 @@ void scope_create() {
     return;
   }
   scope->local_offset = 0;
-  scope->param_offset = 0;
+  scope->param_offset = 4;
   scope->depth = current_scope ? current_scope->depth + 1 : 0;
   scope->symbols = ht_create();
   scope->parent = current_scope;
