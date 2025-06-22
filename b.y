@@ -52,7 +52,7 @@ size_t label_id = 0;
 
 %type <string> constant
 %type <string> inc_dec
-%type <string> unary
+%type <string> unary binary
 %type <number> opt_lst_rvalue
 %type <number> lst_rvalue
 
@@ -219,21 +219,21 @@ unary:
 ;
 
 binary:
-  PIPE
-| AMPERSAND
-| EQ
-| NE
-| LT
-| LTE
-| GT
-| GTE
-| LSHIFT
-| RSHIFT
-| MINUS
-| PLUS
-| MOD
-| ASTERISK
-| DIV
+  PIPE      { $$ = strdup("or"); }
+| AMPERSAND { $$ = strdup("and"); }
+| EQ        { $$ = strdup("eq"); }
+| NE        { $$ = strdup("ne"); }
+| LT        { $$ = strdup("lt"); }
+| LTE       { $$ = strdup("lte"); }
+| GT        { $$ = strdup("gt"); }
+| GTE       { $$ = strdup("gte"); }
+| LSHIFT    { $$ = strdup("lshift"); }
+| RSHIFT    { $$ = strdup("rshift"); }
+| MINUS     { $$ = strdup("sub"); }
+| PLUS      { $$ = strdup("add"); }
+| MOD       { $$ = strdup("mod"); }
+| ASTERISK  { $$ = strdup("mul"); }
+| DIV       { $$ = strdup("div"); }
 ;
 
 value_list:
@@ -303,6 +303,63 @@ rvalue:
     printf("  push eax\n");
   } binary rvalue {
     printf("  pop ecx\n");
+    
+    // Generate code based on the binary operator
+    if (strcmp($3, "or") == 0) {
+      printf("  or eax, ecx\n");
+    } else if (strcmp($3, "and") == 0) {
+      printf("  and eax, ecx\n");
+    } else if (strcmp($3, "eq") == 0) {
+      printf("  cmp ecx, eax\n");
+      printf("  sete al\n");
+      printf("  movzx eax, al\n");
+    } else if (strcmp($3, "ne") == 0) {
+      printf("  cmp ecx, eax\n");
+      printf("  setne al\n");
+      printf("  movzx eax, al\n");
+    } else if (strcmp($3, "lt") == 0) {
+      printf("  cmp ecx, eax\n");
+      printf("  setl al\n");
+      printf("  movzx eax, al\n");
+    } else if (strcmp($3, "lte") == 0) {
+      printf("  cmp ecx, eax\n");
+      printf("  setle al\n");
+      printf("  movzx eax, al\n");
+    } else if (strcmp($3, "gt") == 0) {
+      printf("  cmp ecx, eax\n");
+      printf("  setg al\n");
+      printf("  movzx eax, al\n");
+    } else if (strcmp($3, "gte") == 0) {
+      printf("  cmp ecx, eax\n");
+      printf("  setge al\n");
+      printf("  movzx eax, al\n");
+    } else if (strcmp($3, "lshift") == 0) {
+      printf("  mov cl, al\n");
+      printf("  mov eax, ecx\n");
+      printf("  shl eax, cl\n");
+    } else if (strcmp($3, "rshift") == 0) {
+      printf("  mov cl, al\n");
+      printf("  mov eax, ecx\n");
+      printf("  shr eax, cl\n");
+    } else if (strcmp($3, "sub") == 0) {
+      printf("  sub ecx, eax\n");
+      printf("  mov eax, ecx\n");
+    } else if (strcmp($3, "add") == 0) {
+      printf("  add eax, ecx\n");
+    } else if (strcmp($3, "mod") == 0) {
+      printf("  xor edx, edx\n");
+      printf("  mov eax, ecx\n");
+      printf("  div eax\n");
+      printf("  mov eax, edx\n");
+    } else if (strcmp($3, "mul") == 0) {
+      printf("  imul eax, ecx\n");
+    } else if (strcmp($3, "div") == 0) {
+      printf("  xor edx, edx\n");
+      printf("  mov eax, ecx\n");
+      printf("  div eax\n");
+    }
+
+    free($3);
   }
 | rvalue QUESTION {
     printf("  test eax, eax\n");
