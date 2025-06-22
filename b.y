@@ -52,6 +52,7 @@ size_t label_id = 0;
 
 %type <string> constant
 %type <string> inc_dec
+%type <string> unary
 %type <number> opt_lst_rvalue
 %type <number> lst_rvalue
 
@@ -100,7 +101,7 @@ definition:
 
 parameters:
   /* Empty */
-| ID                  {
+| ID {
     symbol_add($1, INTERNAL);
     free($1);
   }
@@ -214,8 +215,8 @@ inc_dec:
 ;
 
 unary:
-  MINUS
-| BANG
+  MINUS { $$ = strdup("neg"); }
+| BANG  { $$ = strdup("not"); }
 ;
 
 binary:
@@ -270,15 +271,23 @@ lvalue:
 
 rvalue:
   LPAREN rvalue RPAREN
-| lvalue { printf("  mov eax, [eax]\n"); }
-| constant             { printf("  mov eax, %s\n", $1); free($1); }
+| lvalue {
+    printf("  mov eax, [eax]\n");
+  }
+| constant {
+    printf("  mov eax, %s\n", $1);
+    free($1);
+  }
 | lvalue ASSIGN {
     printf("  push eax\n");
   } rvalue {
     printf("  pop ecx\n");
     printf("  mov [ecx], eax\n");
   }
-| unary rvalue         {}
+| unary rvalue {
+    printf("  %s eax\n", $1);
+    free($1);
+  }
 | inc_dec lvalue {
     printf("  %s DWORD PTR [eax], 1\n", $1);
     printf("  mov eax, DWORD PTR [eax]\n");
@@ -290,7 +299,7 @@ rvalue:
     printf("  mov eax, ecx\n");
     free($2);
   }
-| AMPERSAND lvalue     { printf("  lea eax, []\n"); }
+| AMPERSAND lvalue
 | rvalue {
     printf("  push eax\n");
   } binary rvalue {
@@ -306,7 +315,7 @@ rvalue:
   } rvalue {
     printf(".L%zu\n", label_id++);
   }
-| ID LPAREN opt_lst_rvalue RPAREN {  // Direct function calls
+| ID LPAREN opt_lst_rvalue RPAREN {
     printf("  call %s\n", $1);
     if ($3 > 0) {
       printf("  add esp, %d\n", $3 * 4);
