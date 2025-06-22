@@ -52,7 +52,8 @@ size_t label_id = 0;
 
 %type <string> constant
 %type <string> inc_dec
-%type <string> unary binary
+%type <string> unary
+%type <string> binary
 %type <number> opt_lst_rvalue
 %type <number> lst_rvalue
 
@@ -91,7 +92,7 @@ definition:
     printf("  push ebp\n");
     printf("  mov ebp, esp\n");
     free($1);
-  } parameters RPAREN statement {
+  } opt_parameters RPAREN statement {
     printf("  mov esp, ebp\n");
     printf("  pop ebp\n");
     printf("  ret\n");
@@ -100,8 +101,7 @@ definition:
 ;
 
 parameters:
-  /* Empty */
-| ID {
+  ID {
     symbol_add($1, INTERNAL);
     free($1);
   }
@@ -109,6 +109,11 @@ parameters:
     symbol_add($3, INTERNAL);
     free($3);
   }
+;
+
+opt_parameters:
+  /* Empty */
+| parameters
 ;
 
 constant:
@@ -255,7 +260,7 @@ lvalue:
     } else if (symbol->storage == INTERNAL) {
       printf("  lea eax, [ebp + %zu]\n", symbol->offset);
     } else {
-      printf("  mov eax, %s\n", symbol->name);
+      printf("  lea eax, %s\n", symbol->name);
     }
     free($1);
   }
@@ -303,8 +308,7 @@ rvalue:
     printf("  push eax\n");
   } binary rvalue {
     printf("  pop ecx\n");
-    
-    // Generate code based on the binary operator
+
     if (strcmp($3, "or") == 0) {
       printf("  or eax, ecx\n");
     } else if (strcmp($3, "and") == 0) {
