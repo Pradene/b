@@ -1,3 +1,7 @@
+char(s, i) {
+  return (s[i]);
+}
+
 main() {
   extrn putchar;
   auto i, s, c;

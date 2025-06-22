@@ -121,7 +121,7 @@ constant:
   printf(".text\n");
 
   char* label = malloc(16);
-  sprintf(label, ".L%zu", label_id++);
+  sprintf(label, "OFFSET .L%zu", label_id++);
   $$ = label;
   free($1);
 }
@@ -207,7 +207,6 @@ else:
   /* Empty */
 | ELSE statement
 ;
-
 
 inc_dec:
   INCREMENT { $$ = strdup("add"); }
@@ -311,9 +310,9 @@ rvalue:
   } rvalue {
     printf("  jmp .L%zu\n", label_id + 1);
   } COLON {
-    printf(".L%zu\n", label_id++);
+    printf(".L%zu:\n", label_id++);
   } rvalue {
-    printf(".L%zu\n", label_id++);
+    printf(".L%zu:\n", label_id++);
   }
 | ID LPAREN opt_lst_rvalue RPAREN {
     printf("  call %s\n", $1);
@@ -357,15 +356,12 @@ opt_paren_rvalue:
 
 opt_lst_rvalue:
   /* Empty */ { $$ = 0; }
-| lst_rvalue  {
-    printf("  push ebx\n");
-    $$ = $1;
-  }
+| lst_rvalue  { $$ = $1; }
 ;
 
 lst_rvalue:
   rvalue      {
-    printf("  mov ebx, eax\n");
+    printf("  push eax\n");
     $$ = 1;
   }
 | lst_rvalue COMMA rvalue {
