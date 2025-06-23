@@ -51,11 +51,22 @@ size_t label_id = 0;
 %token DECREMENT
 
 %type <string> constant
-%type <string> inc_dec
-%type <string> unary
-%type <string> binary
 %type <number> opt_lst_rvalue
 %type <number> lst_rvalue
+
+/* Precedence and associativity - lowest to highest precedence */
+%right ASSIGN                          /* Assignment operators (right associative) */
+%right QUESTION COLON                  /* Conditional expression (right associative) */
+%left PIPE                             /* OR operator */
+%left AMPERSAND                        /* AND operator */
+%left EQ NE                            /* Equality operators */
+%left LT LTE GT GTE                    /* Relational operators */
+%left LSHIFT RSHIFT                    /* Shift operators */
+%left PLUS MINUS                       /* Additive operators */
+%left ASTERISK DIV MOD                 /* Multiplicative operators */
+%right UMINUS UBANG UASTERISK UAMPERSAND /* Unary operators (right associative) */
+%right INCREMENT DECREMENT             /* Increment/decrement operators */
+%left LBRACKET RBRACKET LPAREN RPAREN  /* Array subscript and function call */
 
 %start program
 
@@ -213,34 +224,6 @@ else:
 | ELSE statement
 ;
 
-inc_dec:
-  INCREMENT { $$ = strdup("add"); }
-| DECREMENT { $$ = strdup("sub"); }
-;
-
-unary:
-  MINUS { $$ = strdup("neg"); }
-| BANG  { $$ = strdup("not"); }
-;
-
-binary:
-  PIPE      { $$ = strdup("or"); }
-| AMPERSAND { $$ = strdup("and"); }
-| EQ        { $$ = strdup("eq"); }
-| NE        { $$ = strdup("ne"); }
-| LT        { $$ = strdup("lt"); }
-| LTE       { $$ = strdup("lte"); }
-| GT        { $$ = strdup("gt"); }
-| GTE       { $$ = strdup("gte"); }
-| LSHIFT    { $$ = strdup("lshift"); }
-| RSHIFT    { $$ = strdup("rshift"); }
-| MINUS     { $$ = strdup("sub"); }
-| PLUS      { $$ = strdup("add"); }
-| MOD       { $$ = strdup("mod"); }
-| ASTERISK  { $$ = strdup("mul"); }
-| DIV       { $$ = strdup("div"); }
-;
-
 value_list:
   value
 | value_list COMMA value
@@ -264,17 +247,20 @@ lvalue:
     }
     free($1);
   }
-| ASTERISK rvalue
+| ASTERISK rvalue %prec UASTERISK {
+    /* Indirection operator - result is already in eax */
+  }
 | rvalue {
     printf("  push eax\n");
   } LBRACKET rvalue RBRACKET {
-    printf("  pop ecx\n");
+    printf("  mov ecx, eax\n");
+    printf("  pop eax\n");
     printf("  add eax, ecx\n");
   }
 ;
 
 rvalue:
-  LPAREN rvalue RPAREN
+  LPAREN rvalue RPAREN { }
 | lvalue {
     printf("  mov eax, [eax]\n");
   }
@@ -288,91 +274,156 @@ rvalue:
     printf("  pop ecx\n");
     printf("  mov [ecx], eax\n");
   }
-| unary rvalue {
-    printf("  %s eax\n", $1);
-    free($1);
+| MINUS rvalue %prec UMINUS {
+    printf("  neg eax\n");
   }
-| inc_dec lvalue {
-    printf("  %s DWORD PTR [eax], 1\n", $1);
-    printf("  mov eax, DWORD PTR [eax]\n");
-    free($1);
-  }
-| lvalue inc_dec {
-    printf("  mov ecx, DWORD PTR [eax]\n");
-    printf("  %s DWORD PTR [eax], 1\n", $2);
-    printf("  mov eax, ecx\n");
-    free($2);
-  }
-| AMPERSAND lvalue
-| rvalue {
-    printf("  push eax\n");
-  } binary rvalue {
-    printf("  pop ecx\n");
-
-    if (strcmp($3, "or") == 0) {
-      printf("  or eax, ecx\n");
-    } else if (strcmp($3, "and") == 0) {
-      printf("  and eax, ecx\n");
-    } else if (strcmp($3, "eq") == 0) {
-      printf("  cmp ecx, eax\n");
-      printf("  sete al\n");
-      printf("  movzx eax, al\n");
-    } else if (strcmp($3, "ne") == 0) {
-      printf("  cmp ecx, eax\n");
-      printf("  setne al\n");
-      printf("  movzx eax, al\n");
-    } else if (strcmp($3, "lt") == 0) {
-      printf("  cmp ecx, eax\n");
-      printf("  setl al\n");
-      printf("  movzx eax, al\n");
-    } else if (strcmp($3, "lte") == 0) {
-      printf("  cmp ecx, eax\n");
-      printf("  setle al\n");
-      printf("  movzx eax, al\n");
-    } else if (strcmp($3, "gt") == 0) {
-      printf("  cmp ecx, eax\n");
-      printf("  setg al\n");
-      printf("  movzx eax, al\n");
-    } else if (strcmp($3, "gte") == 0) {
-      printf("  cmp ecx, eax\n");
-      printf("  setge al\n");
-      printf("  movzx eax, al\n");
-    } else if (strcmp($3, "lshift") == 0) {
-      printf("  mov cl, al\n");
-      printf("  mov eax, ecx\n");
-      printf("  shl eax, cl\n");
-    } else if (strcmp($3, "rshift") == 0) {
-      printf("  mov cl, al\n");
-      printf("  mov eax, ecx\n");
-      printf("  shr eax, cl\n");
-    } else if (strcmp($3, "sub") == 0) {
-      printf("  sub ecx, eax\n");
-      printf("  mov eax, ecx\n");
-    } else if (strcmp($3, "add") == 0) {
-      printf("  add eax, ecx\n");
-    } else if (strcmp($3, "mod") == 0) {
-      printf("  xor edx, edx\n");
-      printf("  mov eax, ecx\n");
-      printf("  div eax\n");
-      printf("  mov eax, edx\n");
-    } else if (strcmp($3, "mul") == 0) {
-      printf("  imul eax, ecx\n");
-    } else if (strcmp($3, "div") == 0) {
-      printf("  xor edx, edx\n");
-      printf("  mov eax, ecx\n");
-      printf("  div eax\n");
-    }
-
-    free($3);
-  }
-| rvalue QUESTION {
+| BANG rvalue %prec UBANG {
     printf("  test eax, eax\n");
+    printf("  setz al\n");
+    printf("  movzx eax, al\n");
+  }
+| INCREMENT lvalue {
+    printf("  add DWORD PTR [eax], 1\n");
+    printf("  mov eax, DWORD PTR [eax]\n");
+  }
+| DECREMENT lvalue {
+    printf("  sub DWORD PTR [eax], 1\n");
+    printf("  mov eax, DWORD PTR [eax]\n");
+  }
+| lvalue INCREMENT {
+    printf("  mov ecx, DWORD PTR [eax]\n");
+    printf("  add DWORD PTR [eax], 1\n");
+    printf("  mov eax, ecx\n");
+  }
+| lvalue DECREMENT {
+    printf("  mov ecx, DWORD PTR [eax]\n");
+    printf("  sub DWORD PTR [eax], 1\n");
+    printf("  mov eax, ecx\n");
+  }
+| AMPERSAND lvalue %prec UAMPERSAND {
+    /* Address operator - lvalue already computed address in eax */
+  }
+| rvalue PIPE {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  or eax, ecx\n");
+  }
+| rvalue AMPERSAND {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  and eax, ecx\n");
+  }
+| rvalue EQ {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  cmp ecx, eax\n");
+    printf("  sete al\n");
+    printf("  movzx eax, al\n");
+  }
+| rvalue NE {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  cmp ecx, eax\n");
+    printf("  setne al\n");
+    printf("  movzx eax, al\n");
+  }
+| rvalue LT {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  cmp ecx, eax\n");
+    printf("  setl al\n");
+    printf("  movzx eax, al\n");
+  }
+| rvalue LTE {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  cmp ecx, eax\n");
+    printf("  setle al\n");
+    printf("  movzx eax, al\n");
+  }
+| rvalue GT {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  cmp ecx, eax\n");
+    printf("  setg al\n");
+    printf("  movzx eax, al\n");
+  }
+| rvalue GTE {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  cmp ecx, eax\n");
+    printf("  setge al\n");
+    printf("  movzx eax, al\n");
+  }
+| rvalue LSHIFT {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  mov cl, al\n");
+    printf("  mov eax, ecx\n");
+    printf("  shl eax, cl\n");
+  }
+| rvalue RSHIFT {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  mov cl, al\n");
+    printf("  mov eax, ecx\n");
+    printf("  shr eax, cl\n");
+  }
+| rvalue PLUS {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  add eax, ecx\n");
+  }
+| rvalue MINUS {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  sub ecx, eax\n");
+    printf("  mov eax, ecx\n");
+  }
+| rvalue ASTERISK {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  imul eax, ecx\n");
+  }
+| rvalue DIV {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  mov ecx, eax\n");
+    printf("  pop eax\n");
+    printf("  cdq\n");
+    printf("  idiv ecx\n");
+  }
+| rvalue MOD {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  mov ecx, eax\n");
+    printf("  pop eax\n");
+    printf("  cdq\n");
+    printf("  idiv ecx\n");
+    printf("  mov eax, edx\n");
+  }
+| rvalue QUESTION rvalue COLON rvalue {
+    printf("  pop ecx\n");
+    printf("  test ecx, ecx\n");
     printf("  jz .L%zu\n", label_id);
-  } rvalue {
+    printf("  pop eax\n");
     printf("  jmp .L%zu\n", label_id + 1);
-  } COLON {
     printf(".L%zu:\n", label_id++);
-  } rvalue {
+    printf("  pop ebx\n");
+    printf("  mov eax, ebx\n");
     printf(".L%zu:\n", label_id++);
   }
 | ID LPAREN opt_lst_rvalue RPAREN {
