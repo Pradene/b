@@ -4,9 +4,9 @@ char(s, i) {
 
 main() {
   auto i, s, c, t;
-  i = 0;
+  i = 1;
   s = "Hello world\n";
   c = char(s, i);
-  t = c == 'H';
+  t = c == 'e';
   return (t);
 }

@@ -116,9 +116,9 @@ parameters:
     symbol_add($1, INTERNAL);
     free($1);
   }
-| parameters COMMA ID {
-    symbol_add($3, INTERNAL);
-    free($3);
+| ID COMMA parameters {
+    symbol_add($1, INTERNAL);
+    free($1);
   }
 ;
 
@@ -130,17 +130,23 @@ opt_parameters:
 constant:
   NUMBER { $$ = $1; }
 | CHAR   { $$ = $1; }
-| STRING {
-  printf(".section .rodata\n");
-  printf(".L%zu:\n", label_id);
-  printf("  .string %s\n", $1);
-  printf(".text\n");
 
-  char* label = malloc(16);
-  sprintf(label, "OFFSET .L%zu", label_id++);
-  $$ = label;
-  free($1);
-}
+| STRING {
+    printf(".section .rodata\n");
+    printf(".L%zu:\n", label_id);
+    // printf("  .long .L%zu + 4\n", label_id);  // Descriptor pointer
+    char *str = $1;
+    for (int i = 1; i <= (int)strlen(str) - 1; i++) {
+      printf("  .long %d\n", (int)str[i]);
+    }
+    printf("  .long 0\n");
+
+    printf(".text\n");
+    char* label = malloc(32);
+    sprintf(label, "OFFSET .L%zu", label_id++);
+    $$ = label;
+    free($1);
+  }
 ;
 
 value:
@@ -247,13 +253,12 @@ lvalue:
     }
     free($1);
   }
-| ASTERISK rvalue %prec UASTERISK {
-    /* Indirection operator - result is already in eax */
-  }
-| rvalue {
+| ASTERISK rvalue %prec UASTERISK
+| rvalue LBRACKET {
     printf("  push eax\n");
-  } LBRACKET rvalue RBRACKET {
+  } rvalue RBRACKET {
     printf("  mov ecx, eax\n");
+    printf("  shl ecx, 2\n");
     printf("  pop eax\n");
     printf("  add eax, ecx\n");
   }
@@ -262,7 +267,7 @@ lvalue:
 rvalue:
   LPAREN rvalue RPAREN { }
 | lvalue {
-    printf("  mov eax, [eax]\n");
+    printf("  mov eax, DWORD PTR [eax]\n");
   }
 | constant {
     printf("  mov eax, %s\n", $1);
@@ -300,9 +305,7 @@ rvalue:
     printf("  sub DWORD PTR [eax], 1\n");
     printf("  mov eax, ecx\n");
   }
-| AMPERSAND lvalue %prec UAMPERSAND {
-    /* Address operator - lvalue already computed address in eax */
-  }
+| AMPERSAND lvalue %prec UAMPERSAND
 | rvalue PIPE {
     printf("  push eax\n");
   } rvalue {
@@ -443,8 +446,6 @@ rvalue:
     }
   }
 ;
-
-/* Optional */
 
 opt_array:
   /* Empty */
