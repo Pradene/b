@@ -135,7 +135,7 @@ constant:
     printf(".section .rodata\n");
     printf(".L%zu:\n", ++label_id);
     char *str = $1;
-    for (int i = 1; i <= (int)strlen(str) - 1; i++) {
+    for (int i = 1; i < (int)strlen(str) - 1; i++) {
       printf("  .long %d\n", (int)str[i]);
     }
     printf("  .long 0\n");
