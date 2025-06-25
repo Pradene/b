@@ -134,7 +134,6 @@ constant:
 | STRING {
     printf(".section .rodata\n");
     printf(".L%zu:\n", label_id);
-    // printf("  .long .L%zu + 4\n", label_id);  // Descriptor pointer
     char *str = $1;
     for (int i = 1; i <= (int)strlen(str) - 1; i++) {
       printf("  .long %d\n", (int)str[i]);
@@ -175,8 +174,7 @@ statement:
     printf(".L%zu:\n", label_id++);
   }
 | WHILE {
-    printf(".L%zu:\n", label_id);
-    printf("  .long .L%zu + 4\n", label_id++);
+    printf(".L%zu:\n", label_id++);
   } LPAREN rvalue RPAREN {
     printf("  test eax, eax\n");
     printf("  jz .L%zu\n", label_id);

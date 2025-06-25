@@ -3,10 +3,14 @@ char(s, i) {
 }
 
 main() {
-  auto i, s, c, t;
-  i = 1;
-  s = "Hello world\n";
-  c = char(s, i);
-  t = c == 'e';
-  return (t);
+  extrn putchar;
+  auto i, s, c;
+  i = 0;
+  s = "Hello world";
+  while ((c = char(s, i)) != 0) {
+    putchar(c);
+    ++i;
+  }
+
+  return (0);
 }
