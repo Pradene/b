@@ -10,7 +10,7 @@ make
 
 2. Run the program:
 ```bash
-./B < main.b
+./B < file.b
 ```
 
 ## Ressources

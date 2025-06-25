@@ -45,28 +45,26 @@ size_t label_id = 0;
 %token MINUS
 %token MOD
 %token PIPE
-%token RSHIFT
-%token LSHIFT
-%token INCREMENT
-%token DECREMENT
+%token RSHIFT LSHIFT
+%token INCREMENT DECREMENT
 
 %type <string> constant
-%type <number> opt_lst_rvalue
-%type <number> lst_rvalue
+%type <number> opt_arguments
+%type <number> arguments
 
 /* Precedence and associativity - lowest to highest precedence */
-%right ASSIGN                          /* Assignment operators (right associative) */
-%right QUESTION COLON                  /* Conditional expression (right associative) */
-%left PIPE                             /* OR operator */
-%left AMPERSAND                        /* AND operator */
-%left EQ NE                            /* Equality operators */
-%left LT LTE GT GTE                    /* Relational operators */
-%left LSHIFT RSHIFT                    /* Shift operators */
-%left PLUS MINUS                       /* Additive operators */
-%left ASTERISK DIV MOD                 /* Multiplicative operators */
+%right ASSIGN                            /* Assignment operators (right associative) */
+%right QUESTION COLON                    /* Conditional expression (right associative) */
+%left  PIPE                              /* OR operator */
+%left  AMPERSAND                         /* AND operator */
+%left  EQ NE                             /* Equality operators */
+%left  LT LTE GT GTE                     /* Relational operators */
+%left  LSHIFT RSHIFT                     /* Shift operators */
+%left  PLUS MINUS                        /* Additive operators */
+%left  ASTERISK DIV MOD                  /* Multiplicative operators */
 %right UMINUS UBANG UASTERISK UAMPERSAND /* Unary operators (right associative) */
-%right INCREMENT DECREMENT             /* Increment/decrement operators */
-%left LBRACKET RBRACKET LPAREN RPAREN  /* Array subscript and function call */
+%right INCREMENT DECREMENT               /* Increment/decrement operators */
+%left  LBRACKET RBRACKET LPAREN RPAREN   /* Array subscript and function call */
 
 %start program
 
@@ -90,7 +88,7 @@ definitions:
 ;
 
 definition:
-  ID opt_array opt_value_list SEMICOLON {
+  ID opt_array opt_values SEMICOLON {
     free($1);
   }
 | ID LPAREN {
@@ -109,6 +107,15 @@ definition:
     printf("  ret\n");
     scope_destroy();
   }
+;
+
+array:
+  LBRACKET opt_constant RBRACKET
+;
+
+opt_array:
+  /* Empty */
+| array
 ;
 
 parameters:
@@ -166,9 +173,24 @@ constant:
   }
 ;
 
+opt_constant:
+  /* Empty */
+| constant { free($1); }
+;
+
 value:
   constant  { free($1); }
 | ID        { free($1); }
+;
+
+values:
+  value
+| values COMMA value
+;
+
+opt_values:
+  /* Empty */
+| values
 ;
 
 statement:
@@ -181,7 +203,11 @@ statement:
 | CASE constant COLON statement {
     free($2);
   }
-| LBRACE statements RBRACE
+| LBRACE {
+    scope_create();
+  } statements RBRACE {
+    scope_destroy();
+  }
 | IF LPAREN rvalue {
     printf("  test eax, eax\n");
     printf("  jz .L%zu\n", ++label_id);
@@ -206,8 +232,13 @@ statement:
 | GOTO rvalue SEMICOLON {
 
   }
-| RETURN opt_paren_rvalue SEMICOLON
+| RETURN return_value SEMICOLON
 | opt_rvalue SEMICOLON
+;
+
+return_value:
+  /* Empty */
+| LPAREN rvalue RPAREN
 ;
 
 statements:
@@ -248,11 +279,6 @@ else:
 | ELSE statement
 ;
 
-value_list:
-  value
-| value_list COMMA value
-;
-
 lvalue:
   ID {
     Symbol *symbol = symbol_find_global($1);
@@ -283,7 +309,7 @@ lvalue:
 ;
 
 rvalue:
-  LPAREN rvalue RPAREN { }
+  LPAREN rvalue RPAREN
 | lvalue {
     printf("  mov eax, DWORD PTR [eax]\n");
   }
@@ -436,18 +462,16 @@ rvalue:
     printf("  idiv ecx\n");
     printf("  mov eax, edx\n");
   }
-| rvalue QUESTION rvalue COLON rvalue {
-    printf("  pop ecx\n");
-    printf("  test ecx, ecx\n");
+| rvalue QUESTION {
+    printf("  test eax, eax\n");
     printf("  jz .L%zu\n", ++label_id);
-    printf("  pop eax\n");
+  } rvalue {
     printf("  jmp .L%zu\n", ++label_id);
     printf(".L%zu:\n", --label_id);
-    printf("  pop ebx\n");
-    printf("  mov eax, ebx\n");
+  } COLON rvalue {
     printf(".L%zu:\n", ++label_id);
   }
-| ID LPAREN opt_lst_rvalue RPAREN {
+| ID LPAREN opt_arguments RPAREN {
     printf("  call %s\n", $1);
     if ($3 > 0) {
       printf("  add esp, %d\n", $3 * 4);
@@ -456,7 +480,7 @@ rvalue:
   }
 | rvalue {
     printf("  mov ebx, eax\n");
-  } LPAREN opt_lst_rvalue RPAREN {
+  } LPAREN opt_arguments RPAREN {
     printf("  mov eax, ebx\n");
     printf("  call eax\n");
     if ($4 > 0) {
@@ -465,45 +489,25 @@ rvalue:
   }
 ;
 
-opt_array:
+opt_rvalue:
   /* Empty */
-| LBRACKET opt_constant RBRACKET
+| rvalue
 ;
 
-opt_value_list:
-  /* Empty */
-| value_list
-;
-
-opt_constant:
-  /* Empty */
-| constant { free($1); }
-;
-
-opt_paren_rvalue:
-  /* Empty */
-| LPAREN rvalue RPAREN
-;
-
-opt_lst_rvalue:
-  /* Empty */ { $$ = 0; }
-| lst_rvalue  { $$ = $1; }
-;
-
-lst_rvalue:
+arguments:
   rvalue      {
     printf("  push eax\n");
     $$ = 1;
   }
-| lst_rvalue COMMA rvalue {
+| arguments COMMA rvalue {
     printf("  push eax\n");
     $$ = $1 + 1;
   }
 ;
 
-opt_rvalue:
-  /* Empty */
-| rvalue
+opt_arguments:
+  /* Empty */ { $$ = 0; }
+| arguments   { $$ = $1; }
 ;
 
 %%
