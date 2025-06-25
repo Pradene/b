@@ -133,7 +133,7 @@ constant:
 
 | STRING {
     printf(".section .rodata\n");
-    printf(".L%zu:\n", label_id);
+    printf(".L%zu:\n", ++label_id);
     char *str = $1;
     for (int i = 1; i <= (int)strlen(str) - 1; i++) {
       printf("  .long %d\n", (int)str[i]);
@@ -142,7 +142,7 @@ constant:
 
     printf(".text\n");
     char* label = malloc(32);
-    sprintf(label, "OFFSET .L%zu", label_id++);
+    sprintf(label, "OFFSET .L%zu", label_id);
     $$ = label;
     free($1);
   }
@@ -166,21 +166,21 @@ statement:
 | LBRACE statements RBRACE
 | IF LPAREN rvalue {
     printf("  test eax, eax\n");
-    printf("  jz .L%zu\n", label_id);
+    printf("  jz .L%zu\n", ++label_id);
   } RPAREN statement {
     printf("  jmp .L%zu\n", ++label_id);
-    printf(".L%zu:\n", label_id - 1);
+    printf(".L%zu:\n", --label_id);
   } else {
-    printf(".L%zu:\n", label_id++);
+    printf(".L%zu:\n", ++label_id);
   }
 | WHILE {
-    printf(".L%zu:\n", label_id++);
+    printf(".L%zu:\n", ++label_id);
   } LPAREN rvalue RPAREN {
     printf("  test eax, eax\n");
-    printf("  jz .L%zu\n", label_id);
+    printf("  jz .L%zu\n", ++label_id);
   } statement {
-    printf("  jmp .L%zu\n", label_id - 1);
-    printf(".L%zu:\n", label_id++);
+    printf("  jmp .L%zu\n", --label_id);
+    printf(".L%zu:\n", ++label_id);
   }
 | SWITCH rvalue statement {
 
@@ -419,13 +419,13 @@ rvalue:
 | rvalue QUESTION rvalue COLON rvalue {
     printf("  pop ecx\n");
     printf("  test ecx, ecx\n");
-    printf("  jz .L%zu\n", label_id);
+    printf("  jz .L%zu\n", ++label_id);
     printf("  pop eax\n");
-    printf("  jmp .L%zu\n", label_id + 1);
-    printf(".L%zu:\n", label_id++);
+    printf("  jmp .L%zu\n", ++label_id);
+    printf(".L%zu:\n", --label_id);
     printf("  pop ebx\n");
     printf("  mov eax, ebx\n");
-    printf(".L%zu:\n", label_id++);
+    printf(".L%zu:\n", ++label_id);
   }
 | ID LPAREN opt_lst_rvalue RPAREN {
     printf("  call %s\n", $1);
