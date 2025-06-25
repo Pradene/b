@@ -130,13 +130,31 @@ opt_parameters:
 constant:
   NUMBER { $$ = $1; }
 | CHAR   { $$ = $1; }
-
 | STRING {
+    int  c;
+    char *s = $1;
+
     printf(".section .rodata\n");
     printf(".L%zu:\n", ++label_id);
-    char *str = $1;
-    for (int i = 1; i < (int)strlen(str) - 1; i++) {
-      printf("  .long %d\n", (int)str[i]);
+
+    for (int i = 1; i < (int)strlen(s) - 1; i++) {
+      c = (int)s[i];
+      if (c == '\\') {
+        c = (int)s[++i];
+        switch(c) {
+          case '0':  c = 0; break;
+          case 'e':  c = 27; break;
+          case 'n':  c = 10; break;
+          case 't':  c = 9; break;
+          case '(':  c = 40; break;
+          case ')':  c = 41; break;
+          case '\'': c = 39; break;
+          case '"':  c = 34; break;
+          case '*':  c = 42; break;
+          default:   break;
+        }
+      }
+      printf("  .long %d\n", c);
     }
     printf("  .long 0\n");
 
@@ -215,10 +233,12 @@ auto_identifiers:
 extrn_identifiers:
   ID                         {
     symbol_add($1, EXTERNAL);
+    printf(".extern %s\n", $1);
     free($1);
   }
 | extrn_identifiers COMMA ID {
     symbol_add($3, EXTERNAL);
+    printf(".extern %s\n", $3);
     free($3);
   }
 ;
