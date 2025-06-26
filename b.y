@@ -419,17 +419,15 @@ rvalue:
 | rvalue LSHIFT {
     printf("  push eax\n");
   } rvalue {
-    printf("  pop ecx\n");
-    printf("  mov cl, al\n");
-    printf("  mov eax, ecx\n");
+    printf("  mov ecx, eax\n");
+    printf("  pop eax\n");
     printf("  shl eax, cl\n");
   }
 | rvalue RSHIFT {
     printf("  push eax\n");
   } rvalue {
-    printf("  pop ecx\n");
-    printf("  mov cl, al\n");
-    printf("  mov eax, ecx\n");
+    printf("  mov ecx, eax\n");
+    printf("  pop eax\n");
     printf("  shr eax, cl\n");
   }
 | rvalue PLUS {
