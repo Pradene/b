@@ -8,7 +8,7 @@
 
 typedef struct Scope Scope;
 
-typedef enum { EXTERNAL, AUTOMATIC, INTERNAL } Storage;
+typedef enum { EXTERNAL, AUTOMATIC, INTERNAL, LABEL } Storage;
 
 typedef struct {
   char *name;
@@ -31,7 +31,6 @@ Scope *current_scope = NULL;
 
 // Create a new scope
 void scope_create() {
-  // printf("Scope created\n");
   Scope *scope = (Scope *)malloc(sizeof(Scope));
   if (scope == NULL) {
     return;
@@ -46,7 +45,6 @@ void scope_create() {
 
 // Destroy the current scope
 void scope_destroy() {
-  // printf("Scope destroyed\n");
   if (current_scope != NULL) {
     Scope *scope = current_scope;
 

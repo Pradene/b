@@ -196,8 +196,8 @@ opt_values:
 
 statement:
   /* Empty */
-| AUTO auto_identifiers SEMICOLON statement
-| EXTRN extrn_identifiers SEMICOLON statement
+| AUTO auto_ids SEMICOLON statement
+| EXTRN extrn_ids SEMICOLON statement
 | LBRACE {
     scope_create();
   } statements RBRACE {
@@ -227,13 +227,20 @@ statement:
 | CASE constant COLON statement {
     free($2);
   }
-| GOTO rvalue SEMICOLON {
-
-  }
-| ID COLON statement {
+| ID COLON {
+    symbol_add($1, LABEL);
+    printf(".%s:\n", $1);
+    printf("  .long .%s + 4\n", $1);
     free($1);
+  } statement
+| GOTO rvalue SEMICOLON {
+    printf("  jmp [eax]\n");
   }
-| RETURN return_value SEMICOLON
+| RETURN return_value SEMICOLON {
+    printf("  mov esp, ebp\n");
+    printf("  pop ebp\n");
+    printf("  ret\n");
+  }
 | opt_rvalue SEMICOLON
 ;
 
@@ -247,14 +254,14 @@ statements:
 | statements statement
 ;
 
-auto_identifiers:
+auto_ids:
   ID {
     symbol_add($1, AUTOMATIC);
     printf("  sub esp, 4\n");
     printf("  mov DWORD PTR [ebp - %zu], 0\n", current_scope->local_offset);
     free($1);
   }
-| auto_identifiers COMMA ID {
+| auto_ids COMMA ID {
     symbol_add($3, AUTOMATIC);
     printf("  sub esp, 4\n");
     printf("  mov DWORD PTR [ebp - %zu], 0\n", current_scope->local_offset);
@@ -262,13 +269,13 @@ auto_identifiers:
   }
 ;
 
-extrn_identifiers:
+extrn_ids:
   ID                         {
     symbol_add($1, EXTERNAL);
     printf(".extern %s\n", $1);
     free($1);
   }
-| extrn_identifiers COMMA ID {
+| extrn_ids COMMA ID {
     symbol_add($3, EXTERNAL);
     printf(".extern %s\n", $3);
     free($3);
@@ -289,13 +296,23 @@ lvalue:
       YYERROR;
     }
 
-    if (symbol->storage == AUTOMATIC) {
-      printf("  lea eax, [ebp - %zu]\n", symbol->offset);
-    } else if (symbol->storage == INTERNAL) {
-      printf("  lea eax, [ebp + %zu]\n", symbol->offset);
-    } else {
-      printf("  lea eax, %s\n", symbol->name);
-      extrn = 1;
+    switch (symbol->storage) {
+      case AUTOMATIC:
+        printf("  lea eax, [ebp - %zu]\n", symbol->offset);
+        break ;
+      case INTERNAL:
+        printf("  lea eax, [ebp + %zu]\n", symbol->offset);
+        break ;
+      case EXTERNAL:
+        printf("  lea eax, %s\n", symbol->name);
+        extrn = 1;
+        break ;
+      case LABEL:
+        printf("  lea eax, [.%s]\n", symbol->name);
+        extrn = 1;
+        break ;
+      default:
+        break;
     }
     free($1);
   }
