@@ -14,6 +14,7 @@ extern int yycolumn;
 extern char *yytext;
 
 size_t label_id = 0;
+int    extrn = 0;
 %}
 
 %union {
@@ -150,13 +151,13 @@ constant:
         c = (int)s[++i];
         switch(c) {
           case '0':  c = 0; break;
-          case 'e':  c = 27; break;
-          case 'n':  c = 10; break;
           case 't':  c = 9; break;
+          case 'n':  c = 10; break;
+          case 'e':  c = 27; break;
+          case '"':  c = 34; break;
+          case '\'': c = 39; break;
           case '(':  c = 40; break;
           case ')':  c = 41; break;
-          case '\'': c = 39; break;
-          case '"':  c = 34; break;
           case '*':  c = 42; break;
           default:   break;
         }
@@ -197,12 +198,6 @@ statement:
   /* Empty */
 | AUTO auto_identifiers SEMICOLON statement
 | EXTRN extrn_identifiers SEMICOLON statement
-| ID COLON statement {
-    free($1);
-  }
-| CASE constant COLON statement {
-    free($2);
-  }
 | LBRACE {
     scope_create();
   } statements RBRACE {
@@ -229,8 +224,14 @@ statement:
 | SWITCH rvalue statement {
 
   }
+| CASE constant COLON statement {
+    free($2);
+  }
 | GOTO rvalue SEMICOLON {
 
+  }
+| ID COLON statement {
+    free($1);
   }
 | RETURN return_value SEMICOLON
 | opt_rvalue SEMICOLON
@@ -294,6 +295,7 @@ lvalue:
       printf("  lea eax, [ebp + %zu]\n", symbol->offset);
     } else {
       printf("  lea eax, %s\n", symbol->name);
+      extrn = 1;
     }
     free($1);
   }
@@ -311,7 +313,11 @@ lvalue:
 rvalue:
   LPAREN rvalue RPAREN
 | lvalue {
-    printf("  mov eax, DWORD PTR [eax]\n");
+    if (extrn == 0) {
+      printf("  mov eax, DWORD PTR [eax]\n");
+    }
+
+    extrn = 0;
   }
 | constant {
     printf("  mov eax, %s\n", $1);
@@ -471,16 +477,9 @@ rvalue:
   } COLON rvalue {
     printf(".L%zu:\n", ++label_id);
   }
-| ID LPAREN opt_arguments RPAREN {
-    printf("  call %s\n", $1);
-    if ($3 > 0) {
-      printf("  add esp, %d\n", $3 * 4);
-    }
-    free($1);
-  }
-| rvalue {
+| rvalue LPAREN {
     printf("  mov ebx, eax\n");
-  } LPAREN opt_arguments RPAREN {
+  } opt_arguments RPAREN {
     printf("  mov eax, ebx\n");
     printf("  call eax\n");
     if ($4 > 0) {
