@@ -7,7 +7,7 @@ main() {
   if (i >= max) {
     return (i);
   }
-  ++i;
+  i =+ 1;
 
   goto loop;
   return (1);
