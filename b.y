@@ -221,11 +221,18 @@ statement:
     printf("  jmp .L%zu\n", --label_id);
     printf(".L%zu:\n", ++label_id);
   }
-| SWITCH rvalue statement {
-
+| SWITCH rvalue {
+    printf("  push ebx\n");
+    printf("  mov ebx, eax\n");
+  } statement {
+    printf("  pop ebx\n");
   }
-| CASE constant COLON statement {
+| CASE constant COLON {
+    printf("  cmp ebx, eax\n");
+    printf("  jnz .L%zu\n", ++label_id);
     free($2);
+  } statement {
+    printf(".L%zu:\n", label_id);
   }
 | ID COLON {
     symbol_add($1, LABEL);
