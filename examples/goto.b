@@ -1,14 +1,14 @@
 main() {
-  auto i, max;
+  auto i, m;
   i = 0;
-  max = 10;
+  m = 10;
 
   loop:
-  if (i >= max) {
-    return (i);
+  if (i < m) {
+    i =+ 1;
+    goto loop;
   }
-  i =+ 1;
 
-  goto loop;
-  return (1);
+  i === m;
+  return (i);
 }

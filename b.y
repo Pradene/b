@@ -13,7 +13,13 @@ extern int yylineno;
 extern int yycolumn;
 extern char *yytext;
 
-size_t label_id = 0;
+size_t label = 0;
+size_t label_fn = 0;
+size_t label_if = 0;
+size_t label_while = 0;
+size_t label_switch = 0;
+size_t label_tern = 0;
+size_t label_const = 0;
 int    extrn = 0;
 %}
 
@@ -49,9 +55,8 @@ int    extrn = 0;
 %token RSHIFT LSHIFT
 %token INCREMENT DECREMENT
 
-%type <string> constant
-%type <number> opt_arguments
-%type <number> arguments
+%type <string> constant opt_constant
+%type <number> arguments opt_arguments
 
 /* Precedence and associativity - lowest to highest precedence */
 %right ASSIGN                            /* Assignment operators (right associative) */
@@ -103,6 +108,7 @@ definition:
     printf("  mov ebp, esp\n");
     free($1);
   } opt_parameters RPAREN statement {
+    printf(".LF%zu:\n", label_fn++);
     printf("  mov esp, ebp\n");
     printf("  pop ebp\n");
     printf("  ret\n");
@@ -139,12 +145,12 @@ constant:
   NUMBER { $$ = $1; }
 | CHAR   { $$ = $1; }
 | STRING {
-    int  c;
     char *s = $1;
 
     printf(".section .rodata\n");
-    printf(".L%zu:\n", ++label_id);
+    printf(".LC%zu:\n", label_const);
 
+    int c;
     for (int i = 1; i < (int)strlen(s) - 1; i++) {
       c = (int)s[i];
       if (c == '\\') {
@@ -165,18 +171,22 @@ constant:
       printf("  .long %d\n", c);
     }
     printf("  .long 0\n");
-
     printf(".text\n");
-    char* label = malloc(32);
-    sprintf(label, "OFFSET .L%zu", label_id);
-    $$ = label;
+
+    char* l = (char *)malloc(32);
+    if (l == NULL) {
+      exit(1);
+    }
+
+    sprintf(l, "OFFSET .LC%zu", label_const++);
+    $$ = l;
     free($1);
   }
 ;
 
 opt_constant:
-  /* Empty */
-| constant { free($1); }
+  /* Empty */ { $$ = NULL; }
+| constant    { $$ = $1; }
 ;
 
 value:
@@ -196,8 +206,8 @@ opt_values:
 
 statement:
   /* Empty */
-| AUTO auto_ids SEMICOLON statement
-| EXTRN extrn_ids SEMICOLON statement
+| AUTO auto SEMICOLON statement
+| EXTRN extrn SEMICOLON statement
 | LBRACE {
     scope_create();
   } statements RBRACE {
@@ -205,21 +215,21 @@ statement:
   }
 | IF LPAREN rvalue {
     printf("  test eax, eax\n");
-    printf("  jz .L%zu\n", ++label_id);
+    printf("  jz .LIE%zu\n", ++label_if);
   } RPAREN statement {
-    printf("  jmp .L%zu\n", ++label_id);
-    printf(".L%zu:\n", --label_id);
+    printf("  jmp .LIE%zu\n", ++label_if);
+    printf(".LIE%zu:\n", --label_if);
   } else {
-    printf(".L%zu:\n", ++label_id);
+    printf(".LIE%zu:\n", ++label_if);
   }
 | WHILE {
-    printf(".L%zu:\n", ++label_id);
+    printf(".LW%zu:\n", ++label_while);
   } LPAREN rvalue RPAREN {
     printf("  test eax, eax\n");
-    printf("  jz .L%zu\n", ++label_id);
+    printf("  jz .LW%zu\n", ++label_while);
   } statement {
-    printf("  jmp .L%zu\n", --label_id);
-    printf(".L%zu:\n", ++label_id);
+    printf("  jmp .LW%zu\n", --label_while);
+    printf(".LW%zu:\n", ++label_while);
   }
 | SWITCH rvalue {
     printf("  push ebx\n");
@@ -229,29 +239,27 @@ statement:
   }
 | CASE constant COLON {
     printf("  cmp ebx, eax\n");
-    printf("  jnz .L%zu\n", ++label_id);
+    printf("  jnz .LS%zu\n", label_switch);
     free($2);
   } statement {
-    printf(".L%zu:\n", label_id);
+    printf(".LS%zu:\n", label_switch++);
   }
 | ID COLON {
     symbol_add($1, LABEL);
     printf(".%s:\n", $1);
-    printf("  .long .%s + 4\n", $1);
+    printf("  .long .L%s + 4\n", $1);
     free($1);
   } statement
 | GOTO rvalue SEMICOLON {
     printf("  jmp [eax]\n");
   }
-| RETURN return_value SEMICOLON {
-    printf("  mov esp, ebp\n");
-    printf("  pop ebp\n");
-    printf("  ret\n");
+| RETURN return SEMICOLON {
+    printf("  jmp .LF%zu\n", label_fn);
   }
 | opt_rvalue SEMICOLON
 ;
 
-return_value:
+return:
   /* Empty */
 | LPAREN rvalue RPAREN
 ;
@@ -261,28 +269,31 @@ statements:
 | statements statement
 ;
 
-auto_ids:
+auto:
+  auto_def
+| auto COMMA auto_def
+;
+
+auto_def:
   ID {
     symbol_add($1, AUTOMATIC);
     printf("  sub esp, 4\n");
     printf("  mov DWORD PTR [ebp - %zu], 0\n", current_scope->local_offset);
-    free($1);
-  }
-| auto_ids COMMA ID {
-    symbol_add($3, AUTOMATIC);
-    printf("  sub esp, 4\n");
-    printf("  mov DWORD PTR [ebp - %zu], 0\n", current_scope->local_offset);
-    free($3);
+  } opt_constant {
+    if ($3 != NULL) {
+      printf("  mov DWORD PTR [ebp - %zu], %s\n", current_scope->local_offset, $3);
+      free($3);
+    }
   }
 ;
 
-extrn_ids:
+extrn:
   ID                         {
     symbol_add($1, EXTERNAL);
     printf(".extern %s\n", $1);
     free($1);
   }
-| extrn_ids COMMA ID {
+| extrn COMMA ID {
     symbol_add($3, EXTERNAL);
     printf(".extern %s\n", $3);
     free($3);
@@ -315,7 +326,7 @@ lvalue:
         extrn = 1;
         break ;
       case LABEL:
-        printf("  lea eax, [.%s]\n", symbol->name);
+        printf("  lea eax, [.L%s]\n", symbol->name);
         extrn = 1;
         break ;
       default:
@@ -624,12 +635,12 @@ rvalue:
   }
 | rvalue QUESTION {
     printf("  test eax, eax\n");
-    printf("  jz .L%zu\n", ++label_id);
+    printf("  jz .LT%zu\n", ++label_tern);
   } rvalue {
-    printf("  jmp .L%zu\n", ++label_id);
-    printf(".L%zu:\n", --label_id);
+    printf("  jmp .LT%zu\n", ++label_tern);
+    printf(".LT%zu:\n", --label_tern);
   } COLON rvalue {
-    printf(".L%zu:\n", ++label_id);
+    printf(".LT%zu:\n", ++label_tern);
   }
 | rvalue LPAREN {
     printf("  mov ebx, eax\n");
