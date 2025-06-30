@@ -20,7 +20,7 @@ size_t label_while = 0;
 size_t label_switch = 0;
 size_t label_tern = 0;
 size_t label_const = 0;
-int    extrn = 0;
+int    pointer = 0;
 %}
 
 %union {
@@ -56,6 +56,7 @@ int    extrn = 0;
 %token INCREMENT DECREMENT
 
 %type <string> constant opt_constant
+%type <string> array opt_array
 %type <number> arguments opt_arguments
 
 /* Precedence and associativity - lowest to highest precedence */
@@ -117,12 +118,12 @@ definition:
 ;
 
 array:
-  LBRACKET opt_constant RBRACKET
+  LBRACKET opt_constant RBRACKET { $$ = $2; }
 ;
 
 opt_array:
-  /* Empty */
-| array
+  /* Empty */ { $$ = NULL; }
+| array       { $$ = $1; }
 ;
 
 parameters:
@@ -143,7 +144,34 @@ opt_parameters:
 
 constant:
   NUMBER { $$ = $1; }
-| CHAR   { $$ = $1; }
+| CHAR   {
+    char *s = $1;
+    int c;
+    if (s[1] == '\\') {
+        switch(s[2]) {
+            case '0':  c = 0; break;
+            case 't':  c = 9; break;
+            case 'n':  c = 10; break;
+            case 'e':  c = 27; break;
+            case '"':  c = 34; break;
+            case '\'': c = 39; break;
+            case '(':  c = 40; break;
+            case ')':  c = 41; break;
+            case '*':  c = 42; break;
+            default:   c = s[2]; break;
+        }
+    } else {
+        c = s[1];
+    }
+    char *buf = malloc(32);
+    if (buf == NULL) {
+      exit(1);
+    }
+
+    sprintf(buf, "%d", c);
+    free($1);
+    $$ = buf;
+  }
 | STRING {
     char *s = $1;
 
@@ -173,13 +201,13 @@ constant:
     printf("  .long 0\n");
     printf(".text\n");
 
-    char* l = (char *)malloc(32);
-    if (l == NULL) {
+    char* buf = (char *)malloc(32);
+    if (buf == NULL) {
       exit(1);
     }
 
-    sprintf(l, "OFFSET .LC%zu", label_const++);
-    $$ = l;
+    sprintf(buf, "OFFSET .LC%zu", label_const++);
+    $$ = buf;
     free($1);
   }
 ;
@@ -323,11 +351,11 @@ lvalue:
         break ;
       case EXTERNAL:
         printf("  lea eax, %s\n", symbol->name);
-        extrn = 1;
+        pointer = 1;
         break ;
       case LABEL:
         printf("  lea eax, [.L%s]\n", symbol->name);
-        extrn = 1;
+        pointer = 1;
         break ;
       default:
         break;
@@ -348,11 +376,11 @@ lvalue:
 rvalue:
   LPAREN rvalue RPAREN
 | lvalue {
-    if (extrn == 0) {
+    if (pointer == 0) {
       printf("  mov eax, DWORD PTR [eax]\n");
     }
 
-    extrn = 0;
+    pointer = 0;
   }
 | constant {
     printf("  mov eax, %s\n", $1);
