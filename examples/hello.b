@@ -2,15 +2,27 @@ char(s, i) {
   return (s[i]);
 }
 
-main() {
-  extrn putchar;
-  auto i, s, c;
+putchar(c) {
+  extrn syscall;
+  auto ch;
+  ch = c & 255;
+  syscall(4, 1, &ch, 1);
+}
+
+puts(s) {
+  auto i, c;
   i = 0;
-  s = "Hello world\n";
   while ((c = char(s, i)) != 0) {
     putchar(c);
-    ++i;
+    i =+ 1;
   }
+  putchar('\n');
+}
 
+main() {
+  auto i, s;
+  i = 0;
+  s = "Hello world\n";
+  puts(s);
   return (0);
 }

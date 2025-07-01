@@ -13,14 +13,13 @@ extern int yylineno;
 extern int yycolumn;
 extern char *yytext;
 
-size_t label = 0;
-size_t label_fn = 0;
-size_t label_if = 0;
-size_t label_while = 0;
-size_t label_switch = 0;
-size_t label_tern = 0;
-size_t label_const = 0;
-int    pointer = 0;
+static size_t label_fn = 0;
+static size_t label_if = 0;
+static size_t label_while = 0;
+static size_t label_switch = 0;
+static size_t label_tern = 0;
+static size_t label_const = 0;
+static int    pointer = 0;
 %}
 
 %union {
@@ -165,14 +164,14 @@ constant:
         c = (int)s[1];
     }
 
-    char *buf = malloc(32);
+    char *buf = (char *)malloc(32);
     if (buf == NULL) {
       exit(1);
     }
 
     sprintf(buf, "%d", c);
-    free($1);
     $$ = buf;
+    free($1);
   }
 | STRING {
     char *s = $1;
