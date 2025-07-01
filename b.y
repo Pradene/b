@@ -146,6 +146,7 @@ constant:
   NUMBER { $$ = $1; }
 | CHAR   {
     char *s = $1;
+
     int c;
     if (s[1] == '\\') {
         switch(s[2]) {
@@ -161,8 +162,9 @@ constant:
             default:   c = s[2]; break;
         }
     } else {
-        c = s[1];
+        c = (int)s[1];
     }
+
     char *buf = malloc(32);
     if (buf == NULL) {
       exit(1);
@@ -275,7 +277,7 @@ statement:
 | ID COLON {
     symbol_add($1, LABEL);
     printf(".%s:\n", $1);
-    printf("  .long .L%s + 4\n", $1);
+    printf("  .long .%s + 4\n", $1);
     free($1);
   } statement
 | GOTO rvalue SEMICOLON {
@@ -354,7 +356,7 @@ lvalue:
         pointer = 1;
         break ;
       case LABEL:
-        printf("  lea eax, [.L%s]\n", symbol->name);
+        printf("  lea eax, [.%s]\n", symbol->name);
         pointer = 1;
         break ;
       default:

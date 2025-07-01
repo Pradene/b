@@ -70,29 +70,12 @@ goto        { return GOTO; }
 }
 
 '[^'\\]'        {
-    char *result = malloc(16);
-    sprintf(result, "%d", (int)yytext[1]);
-    yylval.string = result;
+    yylval.string = strdup(yytext);
     return CHAR;
 }
 
 '\\[0ent()'"*]' {
-    char *result = malloc(16);
-    int char_val;
-    switch(yytext[2]) {
-        case '0': char_val = 0; break;
-        case 'e': char_val = 27; break;
-        case 'n': char_val = 10; break;
-        case 't': char_val = 9; break;
-        case '(': char_val = 40; break;
-        case ')': char_val = 41; break;
-        case '\'': char_val = 39; break;
-        case '"': char_val = 34; break;
-        case '*': char_val = 42; break;
-        default: char_val = yytext[2]; break;
-    }
-    sprintf(result, "%d", char_val);
-    yylval.string = result;
+    yylval.string = strdup(yytext);
     return CHAR;
 }
 
