@@ -20,6 +20,29 @@ static size_t label_switch = 0;
 static size_t label_tern = 0;
 static size_t label_const = 0;
 static int    pointer = 0;
+
+/* Function to handle escape sequences like C */
+int handle_escape_char(char c) {
+    switch(c) {
+        case '0':  return 0;   /* null character */
+        case 'a':  return 7;   /* alert (bell) */
+        case 'b':  return 8;   /* backspace */
+        case 't':  return 9;   /* horizontal tab */
+        case 'n':  return 10;  /* newline */
+        case 'v':  return 11;  /* vertical tab */
+        case 'f':  return 12;  /* form feed */
+        case 'r':  return 13;  /* carriage return */
+        case 'e':  return 27;  /* escape (non-standard but kept for compatibility) */
+        case '"':  return 34;  /* double quote */
+        case '\'': return 39;  /* single quote */
+        case '(':  return 40;  /* left parenthesis (non-standard but kept) */
+        case ')':  return 41;  /* right parenthesis (non-standard but kept) */
+        case '*':  return 42;  /* asterisk (non-standard but kept) */
+        case '?':  return 63;  /* question mark */
+        case '\\': return 92;  /* backslash */
+        default:   return c;   /* return the character as-is for unknown escapes */
+    }
+}
 %}
 
 %union {
@@ -27,8 +50,20 @@ static int    pointer = 0;
   int   number;
 }
 
-%token <string> ID NUMBER STRING CHAR
-%token AUTO EXTRN RETURN SWITCH CASE IF ELSE WHILE BREAK GOTO
+%token <string> ID
+%token <string> NUMBER
+%token <string> STRING
+%token <string> CHAR
+%token AUTO
+%token EXTRN
+%token RETURN
+%token SWITCH
+%token CASE
+%token IF
+%token ELSE
+%token WHILE
+%token BREAK
+%token GOTO
 %token SEMICOLON
 %token LPAREN RPAREN
 %token LBRACKET RBRACKET
@@ -59,7 +94,22 @@ static int    pointer = 0;
 %type <number> arguments opt_arguments
 
 /* Precedence and associativity - lowest to highest precedence */
-%right ASSIGN ASSIGN_OR ASSIGN_AMPERSAND ASSIGN_EQ ASSIGN_NE ASSIGN_LT ASSIGN_LTE ASSIGN_GT ASSIGN_GTE ASSIGN_LSHIFT ASSIGN_RSHIFT ASSIGN_PLUS ASSIGN_MINUS ASSIGN_MOD ASSIGN_ASTERISK ASSIGN_DIV               /* Assignment operators (right associative) */
+%right ASSIGN
+      ASSIGN_OR
+      ASSIGN_AMPERSAND
+      ASSIGN_EQ
+      ASSIGN_NE
+      ASSIGN_LT
+      ASSIGN_LTE
+      ASSIGN_GT
+      ASSIGN_GTE
+      ASSIGN_LSHIFT
+      ASSIGN_RSHIFT
+      ASSIGN_PLUS
+      ASSIGN_MINUS
+      ASSIGN_MOD
+      ASSIGN_ASTERISK
+      ASSIGN_DIV                         /* Assignment operators (right associative) */
 %right QUESTION COLON                    /* Conditional expression (right associative) */
 %left  OR                                /* OR operator */
 %left  AMPERSAND                         /* AND operator */
@@ -148,18 +198,7 @@ constant:
 
     int c;
     if (s[1] == '\\') {
-        switch(s[2]) {
-            case '0':  c = 0; break;
-            case 't':  c = 9; break;
-            case 'n':  c = 10; break;
-            case 'e':  c = 27; break;
-            case '"':  c = 34; break;
-            case '\'': c = 39; break;
-            case '(':  c = 40; break;
-            case ')':  c = 41; break;
-            case '*':  c = 42; break;
-            default:   c = s[2]; break;
-        }
+      handle_escape_char(s[2]);
     } else {
         c = (int)s[1];
     }
@@ -183,19 +222,7 @@ constant:
     for (int i = 1; i < (int)strlen(s) - 1; i++) {
       c = (int)s[i];
       if (c == '\\') {
-        c = (int)s[++i];
-        switch(c) {
-          case '0':  c = 0; break;
-          case 't':  c = 9; break;
-          case 'n':  c = 10; break;
-          case 'e':  c = 27; break;
-          case '"':  c = 34; break;
-          case '\'': c = 39; break;
-          case '(':  c = 40; break;
-          case ')':  c = 41; break;
-          case '*':  c = 42; break;
-          default:   break;
-        }
+        c = handle_escape_char(s[++i]);
       }
       printf("  .long %d\n", c);
     }
