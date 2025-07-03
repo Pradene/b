@@ -22,7 +22,7 @@ puts(s) {
 main() {
   auto i, s;
   i = 0;
-  s = "Hello world\n";
+  s = "Hello world";
   puts(s);
   return (0);
 }

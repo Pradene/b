@@ -130,9 +130,9 @@ parameters:
     symbol_add($1, INTERNAL);
     free($1);
   }
-| ID COMMA parameters {
-    symbol_add($1, INTERNAL);
-    free($1);
+| parameters COMMA ID {
+    symbol_add($3, INTERNAL);
+    free($3);
   }
 ;
 
@@ -143,7 +143,7 @@ opt_parameters:
 
 constant:
   NUMBER { $$ = $1; }
-| CHAR   {
+| CHAR {
     char *s = $1;
 
     int c;
@@ -317,7 +317,7 @@ auto_def:
 ;
 
 extrn:
-  ID                         {
+  ID {
     symbol_add($1, EXTERNAL);
     printf(".extern %s\n", $1);
     free($1);
@@ -351,7 +351,7 @@ lvalue:
         printf("  lea eax, [ebp + %zu]\n", symbol->offset);
         break ;
       case EXTERNAL:
-        printf("  lea eax, %s\n", symbol->name);
+        printf("  lea eax, \"%s\" + 4\n", symbol->name);
         pointer = 1;
         break ;
       case LABEL:
@@ -672,9 +672,16 @@ rvalue:
     printf(".LT%zu:\n", ++label_tern);
   }
 | rvalue LPAREN {
-    printf("  mov ebx, eax\n");
+    printf("  push eax\n");
   } opt_arguments RPAREN {
-    printf("  mov eax, ebx\n");
+    for (int i = 0; i < ($4 + 1) / 2; ++i) {
+      printf("  mov ebx, [esp + %d]\n", i * 4);
+      printf("  mov ecx, [esp + %d]\n", ($4 - i) * 4);
+      printf("  mov [esp + %d], ebx\n", ($4 - i) * 4);
+      printf("  mov [esp + %d], ecx\n", i * 4);
+    }
+
+    printf("  pop eax\n");
     printf("  call eax\n");
     if ($4 > 0) {
       printf("  add esp, %d\n", $4 * 4);
@@ -688,7 +695,7 @@ opt_rvalue:
 ;
 
 arguments:
-  rvalue      {
+  rvalue {
     printf("  push eax\n");
     $$ = 1;
   }

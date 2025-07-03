@@ -35,8 +35,8 @@ void scope_create() {
   if (scope == NULL) {
     return;
   }
-  scope->local_offset = 0;
-  scope->param_offset = 4;
+  scope->local_offset = 4;
+  scope->param_offset = 8;
   scope->depth = current_scope ? current_scope->depth + 1 : 0;
   scope->symbols = ht_create();
   scope->parent = current_scope;
@@ -74,11 +74,11 @@ Symbol *symbol_add(char *name, Storage storage) {
   }
 
   if (storage == AUTOMATIC) {
-    current_scope->local_offset += 4;
     symbol->offset = current_scope->local_offset;
+    current_scope->local_offset += 4;
   } else if (storage == INTERNAL) {
-    current_scope->param_offset += 4;
     symbol->offset = current_scope->param_offset;
+    current_scope->param_offset += 4;
   } else {
     symbol->offset = 0;
   }

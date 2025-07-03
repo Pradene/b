@@ -2,6 +2,10 @@ char(s, i) {
   return (s[i]);
 }
 
+zero() {
+  return (0);
+}
+
 main() {
   auto s;
   s = "Hello";
