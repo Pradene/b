@@ -261,12 +261,11 @@ statement:
     printf(".LW%zu:\n", ++label_while);
   }
 | SWITCH rvalue {
-    printf("  push ebx\n");
     printf("  mov ebx, eax\n");
-  } statement {
-    printf("  pop ebx\n");
-  }
-| CASE constant COLON {
+  } statement {}
+| CASE constant {
+    printf("  mov eax, %s\n", $2);
+  } COLON {
     printf("  cmp ebx, eax\n");
     printf("  jnz .LS%zu\n", label_switch);
     free($2);
