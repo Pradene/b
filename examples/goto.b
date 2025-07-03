@@ -9,6 +9,5 @@ main() {
     goto loop;
   }
 
-  i === m;
-  return (i);
+  return (!(i == m));
 }

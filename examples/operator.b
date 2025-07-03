@@ -7,5 +7,5 @@ main() {
   i = (0 + 1) / 1 * 1 - 1;
   s = "Hello World?";
   c = char(s, i);
-  return (c);
+  return (!(c == 'H'));
 }

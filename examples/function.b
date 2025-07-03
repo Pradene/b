@@ -11,5 +11,5 @@ zero() {
 }
 
 main() {
-  return (add(zero(), one()));
+  return (add(zero(), one()) == 1 ? 0 : 1);
 }

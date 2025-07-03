@@ -1,4 +1,4 @@
 main() {
-  auto i 42, a 0, t 5;
+  auto a 0;
   return (a);
 }

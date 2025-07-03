@@ -1,15 +1,14 @@
 main() {
-  auto i, r;
-  i = 0;
-  r = 0;
+  auto i;
+  i = 1;
   switch (i) {
     case 0:
-      r = r + 1;
+      return (1);
     case 1:
-      r = r + 2;
+      return (0);
     case 2:
-      r = r + 4;
+      return (1);
   }
 
-  return (r);
+  return (1);
 }

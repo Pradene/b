@@ -1,3 +1,3 @@
 main(argc) {
-  return (argc);
+  return ((argc == 1) ? 0 : 1);
 }
