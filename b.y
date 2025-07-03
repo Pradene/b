@@ -37,7 +37,7 @@ static int    pointer = 0;
 %token BANG
 %token QUESTION
 %token COLON
-%token ASSIGN
+%token ASSIGN ASSIGN_OR ASSIGN_AMPERSAND ASSIGN_EQ ASSIGN_NE ASSIGN_LT ASSIGN_LTE ASSIGN_GT ASSIGN_GTE ASSIGN_LSHIFT ASSIGN_RSHIFT ASSIGN_PLUS ASSIGN_MINUS ASSIGN_MOD ASSIGN_ASTERISK ASSIGN_DIV
 %token AMPERSAND
 %token ASTERISK
 %token GTE
@@ -50,7 +50,7 @@ static int    pointer = 0;
 %token PLUS
 %token MINUS
 %token MOD
-%token PIPE
+%token OR
 %token RSHIFT LSHIFT
 %token INCREMENT DECREMENT
 
@@ -59,9 +59,9 @@ static int    pointer = 0;
 %type <number> arguments opt_arguments
 
 /* Precedence and associativity - lowest to highest precedence */
-%right ASSIGN                            /* Assignment operators (right associative) */
+%right ASSIGN ASSIGN_OR ASSIGN_AMPERSAND ASSIGN_EQ ASSIGN_NE ASSIGN_LT ASSIGN_LTE ASSIGN_GT ASSIGN_GTE ASSIGN_LSHIFT ASSIGN_RSHIFT ASSIGN_PLUS ASSIGN_MINUS ASSIGN_MOD ASSIGN_ASTERISK ASSIGN_DIV               /* Assignment operators (right associative) */
 %right QUESTION COLON                    /* Conditional expression (right associative) */
-%left  PIPE                              /* OR operator */
+%left  OR                                /* OR operator */
 %left  AMPERSAND                         /* AND operator */
 %left  EQ NE                             /* Equality operators */
 %left  LT LTE GT GTE                     /* Relational operators */
@@ -393,21 +393,21 @@ rvalue:
     printf("  pop ecx\n");
     printf("  mov [ecx], eax\n");
   }
-| lvalue ASSIGN PIPE {
+| lvalue ASSIGN_OR {
     printf("  push eax\n");
   } rvalue {
     printf("  pop ecx\n");
     printf("  or [ecx], eax\n");
     printf("  mov eax, [ecx]\n");
   }
-| lvalue ASSIGN AMPERSAND {
+| lvalue ASSIGN_AMPERSAND {
     printf("  push eax\n");
   } rvalue {
     printf("  pop ecx\n");
     printf("  and [ecx], eax\n");
     printf("  mov eax, [ecx]\n");
   }
-| lvalue EQ ASSIGN {
+| lvalue ASSIGN_EQ {
     printf("  push eax\n");
   } rvalue {
     printf("  pop ecx\n");
@@ -416,7 +416,7 @@ rvalue:
     printf("  movzx eax, al\n");
     printf("  mov [ecx], eax\n");
   }
-| lvalue ASSIGN NE {
+| lvalue ASSIGN_NE {
     printf("  push eax\n");
   } rvalue {
     printf("  pop ecx\n");
@@ -425,7 +425,7 @@ rvalue:
     printf("  movzx eax, al\n");
     printf("  mov [ecx], eax\n");
   }
-| lvalue ASSIGN LT {
+| lvalue ASSIGN_LT {
     printf("  push eax\n");
   } rvalue {
     printf("  pop ecx\n");
@@ -434,7 +434,7 @@ rvalue:
     printf("  movzx eax, al\n");
     printf("  mov [ecx], eax\n");
   }
-| lvalue ASSIGN LTE {
+| lvalue ASSIGN_LTE {
     printf("  push eax\n");
   } rvalue {
     printf("  pop ecx\n");
@@ -443,7 +443,7 @@ rvalue:
     printf("  movzx eax, al\n");
     printf("  mov [ecx], eax\n");
   }
-| lvalue ASSIGN GT {
+| lvalue ASSIGN_GT {
     printf("  push eax\n");
   } rvalue {
     printf("  pop ecx\n");
@@ -452,7 +452,7 @@ rvalue:
     printf("  movzx eax, al\n");
     printf("  mov [ecx], eax\n");
   }
-| lvalue ASSIGN GTE {
+| lvalue ASSIGN_GTE {
     printf("  push eax\n");
   } rvalue {
     printf("  pop ecx\n");
@@ -461,7 +461,7 @@ rvalue:
     printf("  movzx eax, al\n");
     printf("  mov [ecx], eax\n");
   }
-| lvalue ASSIGN LSHIFT {
+| lvalue ASSIGN_LSHIFT {
     printf("  push eax\n");
   } rvalue {
     printf("  mov edx, eax\n");
@@ -471,7 +471,7 @@ rvalue:
     printf("  shl eax, cl\n");
     printf("  mov [ecx], eax\n");
   }
-| lvalue ASSIGN RSHIFT {
+| lvalue ASSIGN_RSHIFT {
     printf("  push eax\n");
   } rvalue {
     printf("  mov edx, eax\n");
@@ -481,21 +481,21 @@ rvalue:
     printf("  shr eax, cl\n");
     printf("  mov [ecx], eax\n");
   }
-| lvalue ASSIGN PLUS {
+| lvalue ASSIGN_PLUS {
     printf("  push eax\n");
   } rvalue {
     printf("  pop ecx\n");
     printf("  add [ecx], eax\n");
     printf("  mov eax, [ecx]\n");
   }
-| lvalue ASSIGN MINUS {
+| lvalue ASSIGN_MINUS {
     printf("  push eax\n");
   } rvalue {
     printf("  pop ecx\n");
     printf("  sub [ecx], eax\n");
     printf("  mov eax, [ecx]\n");
   }
-| lvalue ASSIGN MOD {
+| lvalue ASSIGN_MOD {
     printf("  push eax\n");
   } rvalue {
     printf("  mov edx, eax\n");
@@ -506,7 +506,7 @@ rvalue:
     printf("  mov eax, edx\n");
     printf("  mov [ecx], eax\n");
   }
-| lvalue ASSIGN ASTERISK {
+| lvalue ASSIGN_ASTERISK {
     printf("  push eax\n");
   } rvalue {
     printf("  mov edx, eax\n");
@@ -515,7 +515,7 @@ rvalue:
     printf("  imul eax, edx\n");
     printf("  mov [ecx], eax\n");
   }
-| lvalue ASSIGN DIV {
+| lvalue ASSIGN_DIV {
     printf("  push eax\n");
   } rvalue {
     printf("  mov edx, eax\n");
@@ -552,7 +552,7 @@ rvalue:
     printf("  mov eax, ecx\n");
   }
 | AMPERSAND lvalue %prec UAMPERSAND
-| rvalue PIPE {
+| rvalue OR {
     printf("  push eax\n");
   } rvalue {
     printf("  pop ecx\n");

@@ -40,7 +40,6 @@ goto        { return GOTO; }
 "!"         { return BANG; }
 "?"         { return QUESTION; }
 ":"         { return COLON; }
-"="         { return ASSIGN; }
 
 "&"         { return AMPERSAND; }
 "*"         { return ASTERISK; }
@@ -54,11 +53,28 @@ goto        { return GOTO; }
 "+"         { return PLUS; }
 "-"         { return MINUS; }
 "%"         { return MOD; }
-"|"         { return PIPE; }
+"|"         { return OR; }
 ">>"        { return RSHIFT; }
 "<<"        { return LSHIFT; }
 "++"        { return INCREMENT; }
 "--"        { return DECREMENT; }
+
+"="         { return ASSIGN; }
+"=|"        { return ASSIGN_OR; }
+"=&"        { return ASSIGN_AMPERSAND; }
+"=+"        { return ASSIGN_PLUS; }
+"=-"        { return ASSIGN_MINUS; }
+"=*"        { return ASSIGN_ASTERISK; }
+"=/"        { return ASSIGN_DIV; }
+"=%"        { return ASSIGN_MOD; }
+"==="       { return ASSIGN_EQ; }
+"=!="       { return ASSIGN_NE; }
+"=<"        { return ASSIGN_LT; }
+"=<="       { return ASSIGN_LTE; }
+"=>"        { return ASSIGN_GT; }
+"=>="       { return ASSIGN_GTE; }
+"=<<"       { return ASSIGN_LSHIFT; }
+"=>>"       { return ASSIGN_RSHIFT; }
 
 {NUMBER}    {
     yylval.string = strdup(yytext);
