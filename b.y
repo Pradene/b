@@ -307,10 +307,10 @@ auto_def:
   ID {
     symbol_add($1, AUTOMATIC);
     printf("  sub esp, 4\n");
-    printf("  mov DWORD PTR [ebp - %zu], 0\n", current_scope->local_offset);
+    printf("  mov DWORD PTR [ebp - %zu], 0\n", current_scope->local_offset - 4);
   } opt_constant {
     if ($3 != NULL) {
-      printf("  mov DWORD PTR [ebp - %zu], %s\n", current_scope->local_offset, $3);
+      printf("  mov DWORD PTR [ebp - %zu], %s\n", current_scope->local_offset - 4, $3);
       free($3);
     }
   }
