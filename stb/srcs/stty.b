@@ -1,1 +1,1 @@
-stty() {}
+stty(file, ttystat) {}

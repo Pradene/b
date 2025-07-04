@@ -1,4 +1,4 @@
-creat(filename, mode) {
+creat(string, mode) {
   extrn syscall;
-  return (syscall(8, filename, mode));
+  return (syscall(8, string, mode));
 }
