@@ -15,60 +15,79 @@ TEST_DIR = test
 LEX_INPUT = b.l
 PARSER_INPUT = b.y
 
-LEX_OUTPUT = $(SRCS_DIR)/lex.yy.c
+STB = stb
 
+LEX_OUTPUT = $(SRCS_DIR)/lex.yy.c
 PARSER_OUTPUT = $(SRCS_DIR)/y.tab.c
 PARSER_HEADER = $(INCS_DIR)/y.tab.h
 
 NAME = B
 
+# Collect example .b files and corresponding .s, .o, executable names
+EXAMPLES = $(wildcard $(EXAMPLES_DIR)/*.b)
+SOURCES = $(patsubst $(EXAMPLES_DIR)/%.b,$(TEST_DIR)/%.s,$(EXAMPLES))
+OBJECTS = $(patsubst $(EXAMPLES_DIR)/%.b,$(TEST_DIR)/%.o,$(EXAMPLES))
+BINARIES = $(patsubst $(EXAMPLES_DIR)/%.b,$(TEST_DIR)/%,$(EXAMPLES))
+
 all: $(NAME)
 
-# Create build directory if it doesn't exist
+# Create necessary directories
 $(SRCS_DIR):
-	mkdir -p $(SRCS_DIR)
+	@mkdir -p $(SRCS_DIR)
 
-# Generate parser code from .y file
+$(TEST_DIR):
+	@mkdir -p $(TEST_DIR)
+
+# Parser generation
 $(PARSER_OUTPUT) $(PARSER_HEADER): $(PARSER_INPUT) | $(SRCS_DIR)
 	$(BISON) -d -o $(PARSER_OUTPUT) $(PARSER_INPUT)
 	mv $(SRCS_DIR)/y.tab.h $(PARSER_HEADER)
 
-# Generate lexer code from .l file
+# Lexer generation
 $(LEX_OUTPUT): $(LEX_INPUT) $(PARSER_HEADER) | $(SRCS_DIR)
-	$(FLEX) -o $(LEX_OUTPUT) $(LEX_INPUT)
+	$(FLEX) -o $@ $(LEX_INPUT)
 
-# Compile the program with generated lexer and parser
-$(NAME): $(LEX_OUTPUT) $(PARSER_OUTPUT) | $(SRCS_DIR)
-	$(CC) $(CFLAGS) -I$(INCS_DIR) -o $(NAME) $(LEX_OUTPUT) $(PARSER_OUTPUT)
+# Compiler binary
+$(NAME): $(LEX_OUTPUT) $(PARSER_OUTPUT)
+	$(CC) $(CFLAGS) -I$(INCS_DIR) -o $@ $(LEX_OUTPUT) $(PARSER_OUTPUT)
+
+# Pattern rule to compile .b → .s using ./B
+$(TEST_DIR)/%.s: $(EXAMPLES_DIR)/%.b $(NAME) | $(TEST_DIR)
+	@./$(NAME) < $< > $@
+
+# Pattern rule to compile .s → .o
+$(TEST_DIR)/%.o: $(TEST_DIR)/%.s
+	@gcc -c -m32 -o $@ -x assembler $<
+
+# Pattern rule to link .o → executable
+$(TEST_DIR)/%: $(TEST_DIR)/%.o
+	@ld -m elf_i386 -o $@ $< brt0.o
+
+# Run tests
+tests: $(BINARIES)
+	@echo "Running tests..."
+	@for bin in $(BINARIES); do \
+		echo -n "Testing $$bin... "; \
+		$$bin > /dev/null; \
+		code=$$?; \
+		if [ $$code -eq 0 ]; then \
+			echo "\033[32mOK\033[0m"; \
+		else \
+			echo "\033[31mKO (returned $$code)\033[0m"; \
+		fi; \
+	done
+
+stb.a: $(NAME)
+	@$(MAKE) -C $(STB)
 
 # Clean generated files
 clean:
-	rm -rf $(SRCS_DIR) $(PARSER_HEADER) $(TEST_DIR)
+	@rm -rf $(SRCS_DIR) $(TEST_DIR) $(PARSER_HEADER)
 
 fclean: clean
-	rm -rf $(NAME)
+	@rm -f $(NAME)
 
-# Force rebuild
 re: fclean all
 
-# Test rule: compile examples and verify return values
-test: $(NAME)
-	@mkdir -p $(TEST_DIR)
-	@echo "Running tests..."
-	@for file in $(EXAMPLES_DIR)/*.b; do \
-		base=$$(basename "$$file" .b); \
-		echo -n "Testing $$file... "; \
-		./$(NAME) < "$$file" > $(TEST_DIR)/$$base.s || continue; \
-		gcc -c -m32 -o $(TEST_DIR)/$$base.o -x assembler $(TEST_DIR)/$$base.s; \
-		ld -m elf_i386 -o $(TEST_DIR)/$$base $(TEST_DIR)/$$base.o brt0.o; \
-		$(TEST_DIR)/$$base 1>/dev/null ; \
-		retval=$$?; \
-		if [ $$retval -eq 0 ]; then \
-			echo "\033[32mOK\033[0m"; \
-		else \
-			echo "\033[31mKO (returned $$retval)\033[0m"; \
-		fi; \
-	done
-	@rm -rf $(TEST_DIR)
-
 .PHONY: all clean fclean re test
+
