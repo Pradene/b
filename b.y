@@ -92,6 +92,7 @@ int handle_escape_char(char c) {
 %type <string> constant opt_constant
 %type <string> array opt_array
 %type <number> arguments opt_arguments
+%type <string> value
 
 /* Precedence and associativity - lowest to highest precedence */
 %right ASSIGN
@@ -261,13 +262,19 @@ opt_constant:
 ;
 
 value:
-  constant  { free($1); }
-| ID        { free($1); }
+  constant  { $$ = $1; }
+| ID        { $$ = $1; }
 ;
 
 values:
-  value
-| values COMMA value
+  value {
+    printf("  .long %s\n", $1);
+    free($1);
+  }
+| values COMMA value {
+    printf("  .long %s\n", $3);
+    free($3);
+  }
 ;
 
 opt_values:
