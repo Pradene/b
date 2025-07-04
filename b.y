@@ -23,25 +23,25 @@ static int    pointer = 0;
 
 /* Function to handle escape sequences like C */
 int handle_escape_char(char c) {
-    switch(c) {
-        case '0':  return 0;   /* null character */
-        case 'a':  return 7;   /* alert (bell) */
-        case 'b':  return 8;   /* backspace */
-        case 't':  return 9;   /* horizontal tab */
-        case 'n':  return 10;  /* newline */
-        case 'v':  return 11;  /* vertical tab */
-        case 'f':  return 12;  /* form feed */
-        case 'r':  return 13;  /* carriage return */
-        case 'e':  return 27;  /* escape (non-standard but kept for compatibility) */
-        case '"':  return 34;  /* double quote */
-        case '\'': return 39;  /* single quote */
-        case '(':  return 40;  /* left parenthesis (non-standard but kept) */
-        case ')':  return 41;  /* right parenthesis (non-standard but kept) */
-        case '*':  return 42;  /* asterisk (non-standard but kept) */
-        case '?':  return 63;  /* question mark */
-        case '\\': return 92;  /* backslash */
-        default:   return c;   /* return the character as-is for unknown escapes */
-    }
+  switch(c) {
+    case '0':  return 0;   /* null character */
+    case 'a':  return 7;   /* alert (bell) */
+    case 'b':  return 8;   /* backspace */
+    case 't':  return 9;   /* horizontal tab */
+    case 'n':  return 10;  /* newline */
+    case 'v':  return 11;  /* vertical tab */
+    case 'f':  return 12;  /* form feed */
+    case 'r':  return 13;  /* carriage return */
+    case 'e':  return 27;  /* escape (non-standard but kept for compatibility) */
+    case '"':  return 34;  /* double quote */
+    case '\'': return 39;  /* single quote */
+    case '(':  return 40;  /* left parenthesis (non-standard but kept) */
+    case ')':  return 41;  /* right parenthesis (non-standard but kept) */
+    case '*':  return 42;  /* asterisk (non-standard but kept) */
+    case '?':  return 63;  /* question mark */
+    case '\\': return 92;  /* backslash */
+    default:   return c;   /* return the character as-is for unknown escapes */
+  }
 }
 %}
 
@@ -142,11 +142,28 @@ definitions:
 ;
 
 definition:
-  ID opt_array opt_values SEMICOLON {
+  ID opt_array {
+    printf(".data\n");
+    if ($2 != NULL) {
+      symbol_add($1, POINTER, EXTERNAL);
+      int size = atoi($2);
+      if (size <= 0) size = 1;
+      printf(".globl %s\n", $1);
+      printf("%s:\n", $1);
+      printf("  .long \"%s\" + 4\n", $1);
+      printf("  .space %d\n", size * 4);
+    } else {
+      symbol_add($1, VARIABLE, EXTERNAL);
+      printf(".globl %s\n", $1);
+      printf("%s:\n", $1);
+      printf("  .long \"%s\" + 4\n", $1);
+      printf("  .long 0\n");
+    }
+    if ($2 != NULL) free($2);
     free($1);
-  }
+  } opt_values SEMICOLON {}
 | ID LPAREN {
-    symbol_add($1, EXTERNAL);
+    symbol_add($1, POINTER, EXTERNAL);
     scope_create();
     printf(".text\n");
     printf(".globl %s\n", $1);
@@ -175,11 +192,11 @@ opt_array:
 
 parameters:
   ID {
-    symbol_add($1, INTERNAL);
+    symbol_add($1, VARIABLE, INTERNAL);
     free($1);
   }
 | parameters COMMA ID {
-    symbol_add($3, INTERNAL);
+    symbol_add($3, VARIABLE, INTERNAL);
     free($3);
   }
 ;
@@ -198,7 +215,7 @@ constant:
     if (s[1] == '\\') {
       handle_escape_char(s[2]);
     } else {
-        c = (int)s[1];
+      c = (int)s[1];
     }
 
     char *buf = (char *)malloc(32);
@@ -298,7 +315,7 @@ statement:
     printf(".LS%zu:\n", label_switch++);
   }
 | ID COLON {
-    symbol_add($1, LABEL);
+    symbol_add($1, POINTER, LABEL);
     printf(".%s:\n", $1);
     printf("  .long .%s + 4\n", $1);
     free($1);
@@ -329,12 +346,12 @@ auto:
 
 auto_def:
   ID {
-    symbol_add($1, AUTOMATIC);
+    symbol_add($1, VARIABLE, AUTOMATIC);
     printf("  sub esp, 4\n");
-    printf("  mov DWORD PTR [ebp - %zu], 0\n", current_scope->local_offset - 4);
+    printf("  mov DWORD PTR [ebp - %zu], 0\n", current_scope->local_offset);
   } opt_constant {
     if ($3 != NULL) {
-      printf("  mov DWORD PTR [ebp - %zu], %s\n", current_scope->local_offset - 4, $3);
+      printf("  mov DWORD PTR [ebp - %zu], %s\n", current_scope->local_offset, $3);
       free($3);
     }
   }
@@ -342,12 +359,12 @@ auto_def:
 
 extrn:
   ID {
-    symbol_add($1, EXTERNAL);
+    symbol_add($1, POINTER, EXTERNAL);
     printf(".extern %s\n", $1);
     free($1);
   }
 | extrn COMMA ID {
-    symbol_add($3, EXTERNAL);
+    symbol_add($3, POINTER, EXTERNAL);
     printf(".extern %s\n", $3);
     free($3);
   }
@@ -375,16 +392,16 @@ lvalue:
         printf("  lea eax, [ebp + %zu]\n", symbol->offset);
         break ;
       case EXTERNAL:
-        printf("  lea eax, \"%s\" + 4\n", symbol->name);
-        pointer = 1;
+        printf("  lea eax, [%s]\n", symbol->name);
         break ;
       case LABEL:
         printf("  lea eax, [.%s]\n", symbol->name);
-        pointer = 1;
         break ;
       default:
         break;
     }
+
+    pointer = symbol->type;
     free($1);
   }
 | ASTERISK rvalue %prec UASTERISK
@@ -401,7 +418,7 @@ lvalue:
 rvalue:
   LPAREN rvalue RPAREN
 | lvalue {
-    if (pointer == 0) {
+    if (pointer == VARIABLE) {
       printf("  mov eax, DWORD PTR [eax]\n");
     }
 
@@ -706,7 +723,7 @@ rvalue:
     }
 
     printf("  pop eax\n");
-    printf("  call eax\n");
+    printf("  call [eax]\n");
     if ($4 > 0) {
       printf("  add esp, %d\n", $4 * 4);
     }

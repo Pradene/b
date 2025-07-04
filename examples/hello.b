@@ -4,9 +4,7 @@ char(s, i) {
 
 putchar(c) {
   extrn syscall;
-  auto ch;
-  ch = c & 255;
-  syscall(4, 1, &ch, 1);
+  syscall(4, 1, &c, 1);
 }
 
 puts(s) {

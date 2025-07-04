@@ -61,7 +61,7 @@ test: $(NAME)
 		./$(NAME) < "$$file" > $(TEST_DIR)/$$base.s || continue; \
 		gcc -c -m32 -o $(TEST_DIR)/$$base.o -x assembler $(TEST_DIR)/$$base.s; \
 		ld -m elf_i386 -o $(TEST_DIR)/$$base $(TEST_DIR)/$$base.o brt0.o; \
-		$(TEST_DIR)/$$base 1>/dev/null; \
+		$(TEST_DIR)/$$base 1>/dev/null ; \
 		retval=$$?; \
 		if [ $$retval -eq 0 ]; then \
 			echo "\033[32mOK\033[0m"; \

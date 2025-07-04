@@ -9,9 +9,11 @@
 typedef struct Scope Scope;
 
 typedef enum { EXTERNAL, AUTOMATIC, INTERNAL, LABEL } Storage;
+typedef enum { VARIABLE, POINTER } SymbolType;
 
 typedef struct {
   char *name;
+  SymbolType type;
   Scope *scope;
   size_t offset;
   Storage storage;
@@ -35,8 +37,8 @@ void scope_create() {
   if (scope == NULL) {
     return;
   }
-  scope->local_offset = 4;
-  scope->param_offset = 8;
+  scope->local_offset = 0;
+  scope->param_offset = 4;
   scope->depth = current_scope ? current_scope->depth + 1 : 0;
   scope->symbols = ht_create();
   scope->parent = current_scope;
@@ -63,7 +65,7 @@ void scope_destroy() {
 }
 
 // Add a variable inside the scope
-Symbol *symbol_add(char *name, Storage storage) {
+Symbol *symbol_add(char *name, SymbolType type, Storage storage) {
   if (ht_get(current_scope->symbols, name) != NULL) {
     return NULL;
   }
@@ -74,11 +76,11 @@ Symbol *symbol_add(char *name, Storage storage) {
   }
 
   if (storage == AUTOMATIC) {
-    symbol->offset = current_scope->local_offset;
     current_scope->local_offset += 4;
+    symbol->offset = current_scope->local_offset;
   } else if (storage == INTERNAL) {
-    symbol->offset = current_scope->param_offset;
     current_scope->param_offset += 4;
+    symbol->offset = current_scope->param_offset;
   } else {
     symbol->offset = 0;
   }
@@ -86,6 +88,7 @@ Symbol *symbol_add(char *name, Storage storage) {
   symbol->name = strdup(name);
   symbol->scope = current_scope;
   symbol->storage = storage;
+  symbol->type = type;
 
   ht_set(current_scope->symbols, name, symbol);
   return symbol;
