@@ -17,6 +17,8 @@ ID          [a-zA-Z_][a-zA-Z0-9_]*
 %option nounput
 %option yylineno
 
+%x COMMENT
+
 %%
 
 extrn       { return EXTRN; }
@@ -85,12 +87,19 @@ goto        { return GOTO; }
     return ID;
 }
 
-'[^'\\]'        {
+"/*"               { BEGIN(COMMENT); }
+<COMMENT>{
+  "*/"             { BEGIN(INITIAL); }
+  .|\n             {}
+  <<EOF>>          { fprintf(stderr, "Unterminated comment\n"); exit(1); }
+}
+
+'[^'\\]'           {
     yylval.string = strdup(yytext);
     return CHAR;
 }
 
-'\\[0ent()'"*]' {
+'\\[0ent()\'\"*]' {
     yylval.string = strdup(yytext);
     return CHAR;
 }
