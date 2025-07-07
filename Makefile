@@ -15,7 +15,8 @@ TEST_DIR = test
 LEX_INPUT = b.l
 PARSER_INPUT = b.y
 
-STB = stb
+STB = stb.a
+STB_DIR = stb
 
 LEX_OUTPUT = $(SRCS_DIR)/lex.yy.c
 PARSER_OUTPUT = $(SRCS_DIR)/y.tab.c
@@ -29,7 +30,7 @@ SOURCES = $(patsubst $(EXAMPLES_DIR)/%.b,$(TEST_DIR)/%.s,$(EXAMPLES))
 OBJECTS = $(patsubst $(EXAMPLES_DIR)/%.b,$(TEST_DIR)/%.o,$(EXAMPLES))
 BINARIES = $(patsubst $(EXAMPLES_DIR)/%.b,$(TEST_DIR)/%,$(EXAMPLES))
 
-all: $(NAME)
+all: $(NAME) $(STB)
 
 # Create necessary directories
 $(SRCS_DIR):
@@ -60,8 +61,8 @@ $(TEST_DIR)/%.o: $(TEST_DIR)/%.s
 	@gcc -c -m32 -o $@ -x assembler $<
 
 # Pattern rule to link .o → executable
-$(TEST_DIR)/%: $(TEST_DIR)/%.o
-	@ld -m elf_i386 -o $@ $< brt0.o
+$(TEST_DIR)/%: $(TEST_DIR)/%.o $(STB)
+	@ld -m elf_i386 -o $@ $< brt0.o $(STB_DIR)/$(STB)
 
 # Run tests
 tests: $(BINARIES)
@@ -77,8 +78,8 @@ tests: $(BINARIES)
 		fi; \
 	done
 
-stb.a: $(NAME)
-	@$(MAKE) -C $(STB)
+$(STB): $(NAME)
+	@$(MAKE) -C $(STB_DIR)
 
 # Clean generated files
 clean:
@@ -89,5 +90,5 @@ fclean: clean
 
 re: fclean all
 
-.PHONY: all clean fclean re test
+.PHONY: all clean fclean re tests stb.a
 

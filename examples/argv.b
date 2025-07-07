@@ -11,12 +11,14 @@ puts(s) {
     putchar(c);
     i =+ 1;
   }
+  putchar('\n');
 }
 
-main() {
-  auto i, s;
+main(argc, argv) {
+  auto i;
   i = 0;
-  s = "Hello world\n";
-  puts(s);
+  while ((++i) < argc) {
+    puts(argv[i]);
+  }
   return (0);
 }

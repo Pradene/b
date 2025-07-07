@@ -1,1 +1,0 @@
-gtty(file, ttystat) {}

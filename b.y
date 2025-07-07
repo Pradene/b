@@ -229,20 +229,11 @@ constant:
     free($1);
   }
 | STRING {
-    char *s = $1;
-
     printf(".section .rodata\n");
     printf(".LC%zu:\n", label_const);
 
-    int c;
-    for (int i = 1; i < (int)strlen(s) - 1; i++) {
-      c = (int)s[i];
-      if (c == '\\') {
-        c = handle_escape_char(s[++i]);
-      }
-      printf("  .long %d\n", c);
-    }
-    printf("  .long 0\n");
+    printf("  .long .LC%zu + 4\n", label_const);
+    printf("  .string %s\n", $1);
     printf(".text\n");
 
     char* buf = (char *)malloc(32);
@@ -250,7 +241,7 @@ constant:
       exit(1);
     }
 
-    sprintf(buf, "OFFSET .LC%zu", label_const++);
+    sprintf(buf, ".LC%zu", label_const++);
     $$ = buf;
     free($1);
   }
