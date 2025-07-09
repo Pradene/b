@@ -119,7 +119,8 @@ int handle_escape_char(char c) {
 %left  ASTERISK DIV MOD                  /* Multiplicative operators */
 %right UMINUS UBANG UASTERISK UAMPERSAND /* Unary operators (right associative) */
 %right INCREMENT DECREMENT               /* Increment/decrement operators */
-%left  LBRACKET RBRACKET LPAREN RPAREN   /* Array subscript and function call */
+%left  LBRACKET RBRACKET                 /* Array subscript */
+%left  LPAREN RPAREN                     /* Parenthesis */
 
 %start program
 
@@ -275,13 +276,9 @@ opt_values:
 
 statement:
   /* Empty */
-| AUTO auto SEMICOLON statement
-| EXTRN extrn SEMICOLON statement
-| LBRACE {
-    scope_create();
-  } statements RBRACE {
-    scope_destroy();
-  }
+| AUTO auto SEMICOLON
+| EXTRN extrn SEMICOLON
+| LBRACE statements RBRACE
 | IF LPAREN rvalue {
     printf("  test eax, eax\n");
     printf("  jz .LIE%zu\n", ++label_if);
@@ -302,7 +299,7 @@ statement:
   }
 | SWITCH rvalue {
     printf("  mov ebx, eax\n");
-  } statement {}
+  }
 | CASE constant {
     printf("  mov eax, %s\n", $2);
   } COLON {
@@ -317,7 +314,7 @@ statement:
     printf(".%s:\n", $1);
     printf("  .long .%s + 4\n", $1);
     free($1);
-  } statement
+  }
 | GOTO rvalue SEMICOLON {
     printf("  jmp [eax]\n");
   }
@@ -752,7 +749,7 @@ opt_arguments:
 %%
 
 void yyerror(const char *s) {
-  fprintf(stderr, "Error: %d:%d: %s '%s'\n", yylineno, yycolumn, s, yytext);
+  fprintf(stderr, "Error: %s %d:%d: %s '%s'\n", __FILE__, yylineno, yycolumn, s, yytext);
 }
 
 int main(void) {

@@ -3,12 +3,18 @@
 This project is a B Compiler to ASM using Flex and Bison.
 
 ## Usage 
-1. Build the program:
+1. Run dockerfile:
+```bash
+docker build -t b .
+docker run -it b:latest
+```
+
+2. Build the program:
 ```bash
 make
 ```
 
-2. Run the program:
+3. Run the program:
 ```bash
 ./B < file.b
 ```
