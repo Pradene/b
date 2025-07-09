@@ -29,7 +29,6 @@ case        { return CASE; }
 if          { return IF; }
 else        { return ELSE; }
 while       { return WHILE; }
-break       { return BREAK; }
 goto        { return GOTO; }
 ";"         { return SEMICOLON; }
 "("         { return LPAREN; }

@@ -62,7 +62,6 @@ int handle_escape_char(char c) {
 %token IF
 %token ELSE
 %token WHILE
-%token BREAK
 %token GOTO
 %token SEMICOLON
 %token LPAREN RPAREN
@@ -278,7 +277,11 @@ statement:
   /* Empty */
 | AUTO auto SEMICOLON
 | EXTRN extrn SEMICOLON
-| LBRACE statements RBRACE
+| LBRACE {
+    scope_create();
+  } statements RBRACE {
+    scope_destroy();
+  }
 | IF LPAREN rvalue {
     printf("  test eax, eax\n");
     printf("  jz .LIE%zu\n", ++label_if);
