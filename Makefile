@@ -78,7 +78,7 @@ tests: $(BINARIES)
 		fi; \
 	done
 
-$(STB): $(NAME)
+$(STB):
 	@$(MAKE) -C $(STB_DIR)
 
 # Clean generated files
