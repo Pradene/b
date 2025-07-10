@@ -112,17 +112,16 @@ int handle_escape_char(char c) {
       ASSIGN_MINUS
       ASSIGN_MOD
       ASSIGN_ASTERISK
-      ASSIGN_DIV                         /* Assignment operators (right associative) */
-%right QUESTION COLON                    /* Conditional expression (right associative) */
-%left  OR AMPERSAND                      /* AND/OR operators */
-%left  EQ NE                             /* Equality operators */
-%left  LT LTE GT GTE                     /* Relational operators */
-%left  LSHIFT RSHIFT PLUS MINUS          /* Additive operators */
-%left  ASTERISK DIV MOD                  /* Multiplicative operators */
-%right UMINUS UBANG UASTERISK UAMPERSAND /* Unary operators (right associative) */
-%right INCREMENT DECREMENT               /* Increment/decrement operators */
-%left  LBRACKET RBRACKET                 /* Array subscript */
-%left  LPAREN RPAREN                     /* Parenthesis */
+      ASSIGN_DIV                                             /* Assignment operators */
+%right QUESTION COLON                                        /* Conditional expression */
+%left  OR AMPERSAND                                          /* AND/OR operators */
+%left  EQ NE                                                 /* Equality operators */
+%left  LT LTE GT GTE                                         /* Relational operators */
+%left  LSHIFT RSHIFT PLUS MINUS                              /* Additive operators */
+%left  ASTERISK DIV MOD                                      /* Multiplicative operators */
+%right UMINUS UBANG UASTERISK UAMPERSAND INCREMENT DECREMENT /* Unary operators */
+%left  LBRACKET RBRACKET                                     /* Array subscript */
+%left  LPAREN RPAREN                                         /* Parenthesis */
 
 %start program
 
