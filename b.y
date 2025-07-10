@@ -93,6 +93,9 @@ int handle_escape_char(char c) {
 %type <number> arguments opt_arguments
 %type <string> value
 
+%nonassoc EMPTY
+%nonassoc ID
+
 /* Precedence and associativity - lowest to highest precedence */
 %right ASSIGN
       ASSIGN_OR
@@ -138,7 +141,7 @@ program:
 ;
 
 definitions:
-  /* Empty */
+  /* Empty */ %prec EMPTY
 | definitions definition
 ;
 
@@ -187,8 +190,8 @@ array:
 ;
 
 opt_array:
-  /* Empty */ { $$ = NULL; }
-| array       { $$ = $1; }
+  /* Empty */ %prec EMPTY { $$ = NULL; }
+| array                   { $$ = $1; }
 ;
 
 parameters:
@@ -203,7 +206,7 @@ parameters:
 ;
 
 opt_parameters:
-  /* Empty */
+  /* Empty */ %prec EMPTY
 | parameters
 ;
 
@@ -248,8 +251,8 @@ constant:
 ;
 
 opt_constant:
-  /* Empty */ { $$ = NULL; }
-| constant    { $$ = $1; }
+  /* Empty */ %prec EMPTY { $$ = NULL; }
+| constant                { $$ = $1; }
 ;
 
 value:
@@ -269,12 +272,12 @@ values:
 ;
 
 opt_values:
-  /* Empty */
+  /* Empty */ %prec EMPTY
 | values
 ;
 
 statement:
-  /* Empty */
+  /* Empty */ %prec EMPTY
 | AUTO auto SEMICOLON
 | EXTRN extrn SEMICOLON
 | LBRACE {
@@ -328,12 +331,12 @@ statement:
 ;
 
 return:
-  /* Empty */
+  /* Empty */ %prec EMPTY
 | LPAREN rvalue RPAREN
 ;
 
 statements:
-  /* Empty */
+  /* Empty */ %prec EMPTY
 | statements statement
 ;
 
@@ -369,7 +372,7 @@ extrn:
 ;
 
 else:
-  /* Empty */
+  /* Empty */ %prec EMPTY
 | ELSE statement
 ;
 
@@ -729,7 +732,7 @@ rvalue:
 ;
 
 opt_rvalue:
-  /* Empty */
+  /* Empty */ %prec EMPTY
 | rvalue
 ;
 
@@ -745,8 +748,8 @@ arguments:
 ;
 
 opt_arguments:
-  /* Empty */ { $$ = 0; }
-| arguments   { $$ = $1; }
+  /* Empty */ %prec EMPTY { $$ = 0; }
+| arguments               { $$ = $1; }
 ;
 
 %%
