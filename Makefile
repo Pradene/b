@@ -41,16 +41,16 @@ $(TEST_DIR):
 
 # Parser generation
 $(PARSER_OUTPUT) $(PARSER_HEADER): $(PARSER_INPUT) | $(SRCS_DIR)
-	$(BISON) -d -o $(PARSER_OUTPUT) $(PARSER_INPUT)
-	mv $(SRCS_DIR)/y.tab.h $(PARSER_HEADER)
+	@$(BISON) -d -o $(PARSER_OUTPUT) $(PARSER_INPUT)
+	@mv $(SRCS_DIR)/y.tab.h $(PARSER_HEADER)
 
 # Lexer generation
 $(LEX_OUTPUT): $(LEX_INPUT) $(PARSER_HEADER) | $(SRCS_DIR)
-	$(FLEX) -o $@ $(LEX_INPUT)
+	@$(FLEX) -o $@ $(LEX_INPUT)
 
 # Compiler binary
 $(NAME): $(LEX_OUTPUT) $(PARSER_OUTPUT)
-	$(CC) $(CFLAGS) -I$(INCS_DIR) -o $@ $(LEX_OUTPUT) $(PARSER_OUTPUT)
+	@$(CC) $(CFLAGS) -I$(INCS_DIR) -o $@ $(LEX_OUTPUT) $(PARSER_OUTPUT)
 
 # Pattern rule to compile .b → .s using ./B
 $(TEST_DIR)/%.s: $(EXAMPLES_DIR)/%.b $(NAME) | $(TEST_DIR)
@@ -68,7 +68,7 @@ $(TEST_DIR)/%: $(TEST_DIR)/%.o $(STB)
 tests: $(BINARIES)
 	@echo "Running tests..."
 	@for bin in $(BINARIES); do \
-		echo -n "Testing $$bin... "; \
+		echo -n "$$bin: "; \
 		$$bin > /dev/null; \
 		code=$$?; \
 		if [ $$code -eq 0 ]; then \

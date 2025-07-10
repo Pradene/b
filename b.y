@@ -94,7 +94,9 @@ int handle_escape_char(char c) {
 %type <string> value
 
 %nonassoc EMPTY
+%nonassoc SEMICOLON
 %nonassoc ID
+%nonassoc LVALUE
 
 /* Precedence and associativity - lowest to highest precedence */
 %right ASSIGN
@@ -326,7 +328,8 @@ statement:
 | RETURN return SEMICOLON {
     printf("  jmp .LF%zu\n", label_fn);
   }
-| opt_rvalue SEMICOLON
+| rvalue SEMICOLON
+| SEMICOLON
 ;
 
 return:
@@ -417,7 +420,7 @@ lvalue:
 
 rvalue:
   LPAREN rvalue RPAREN
-| lvalue {
+| lvalue %prec LVALUE {
     if (pointer == VARIABLE) {
       printf("  mov eax, DWORD PTR [eax]\n");
     }
@@ -728,11 +731,6 @@ rvalue:
       printf("  add esp, %d\n", $4 * 4);
     }
   }
-;
-
-opt_rvalue:
-  /* Empty */ %prec EMPTY
-| rvalue
 ;
 
 arguments:
