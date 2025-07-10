@@ -1,8 +1,8 @@
 .intel_syntax noprefix
 .text
-.globl stat
-stat:
-  .long "stat" + 4
+.globl write
+write:
+  .long "write" + 4
   push ebp
   mov ebp, esp
   mov eax, 4

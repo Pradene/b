@@ -214,7 +214,7 @@ constant:
 
     int c;
     if (s[1] == '\\') {
-      handle_escape_char(s[2]);
+      c = handle_escape_char(s[2]);
     } else {
       c = (int)s[1];
     }
