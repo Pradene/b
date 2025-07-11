@@ -94,8 +94,9 @@ int handle_escape_char(char c) {
 %token INCREMENT DECREMENT
 
 /* Ordered from LOWEST to HIGHEST precedence */
-%nonassoc SEMICOLON
+%nonassoc EMPTY
 %nonassoc ID
+%nonassoc ELSE
 %nonassoc LVALUE
 %right    ASSIGN
           ASSIGN_OR
@@ -142,7 +143,7 @@ program:
 ;
 
 definitions:
-  /* Empty */
+  /* Empty */ %prec EMPTY
 | definitions definition
 ;
 
@@ -191,8 +192,8 @@ array:
 ;
 
 opt_array:
-  /* Empty */ { $$ = NULL; }
-| array       { $$ = $1; }
+  /* Empty */ %prec EMPTY { $$ = NULL; }
+| array                   { $$ = $1; }
 ;
 
 parameters:
@@ -207,7 +208,7 @@ parameters:
 ;
 
 opt_parameters:
-  /* Empty */
+  /* Empty */ %prec EMPTY
 | parameters
 ;
 
@@ -252,8 +253,8 @@ constant:
 ;
 
 opt_constant:
-  /* Empty */ { $$ = NULL; }
-| constant    { $$ = $1; }
+  /* Empty */ %prec EMPTY { $$ = NULL; }
+| constant                { $$ = $1; }
 ;
 
 value:
@@ -273,13 +274,13 @@ values:
 ;
 
 opt_values:
-  /* Empty */
+  /* Empty */ %prec EMPTY
 | values
 ;
 
 statement:
-  AUTO auto SEMICOLON
-| EXTRN extrn SEMICOLON
+  AUTO auto SEMICOLON statement
+| EXTRN extrn SEMICOLON statement
 | LBRACE {
     scope_create();
   } statements RBRACE {
@@ -305,7 +306,7 @@ statement:
   }
 | SWITCH rvalue {
     printf("  mov ebx, eax\n");
-  }
+  } statement
 | CASE constant {
     printf("  mov eax, %s\n", $2);
   } COLON {
@@ -332,12 +333,12 @@ statement:
 ;
 
 return:
-  /* Empty */
+  /* Empty */ %prec EMPTY
 | LPAREN rvalue RPAREN
 ;
 
 statements:
-  /* Empty */
+  /* Empty */ %prec EMPTY
 | statements statement
 ;
 
@@ -373,7 +374,7 @@ extrn:
 ;
 
 else:
-  /* Empty */
+  /* Empty */ %prec EMPTY
 | ELSE statement
 ;
 
@@ -744,8 +745,8 @@ arguments:
 ;
 
 opt_arguments:
-  /* Empty */ { $$ = 0; }
-| arguments   { $$ = $1; }
+  /* Empty */ %prec EMPTY { $$ = 0; }
+| arguments               { $$ = $1; }
 ;
 
 %%
