@@ -321,7 +321,7 @@ statement:
     printf(".%s:\n", $1);
     printf("  .long .%s + 4\n", $1);
     free($1);
-  }
+  } statement
 | GOTO rvalue SEMICOLON {
     printf("  jmp [eax]\n");
   }
@@ -401,7 +401,7 @@ lvalue:
         printf("  lea eax, [.%s]\n", symbol->name);
         break ;
       default:
-        break;
+        break ;
     }
 
     pointer = symbol->type;
@@ -569,14 +569,6 @@ rvalue:
     printf("  idiv edx\n");
     printf("  mov [ecx], eax\n");
   }
-| MINUS rvalue %prec UMINUS {
-    printf("  neg eax\n");
-  }
-| BANG rvalue %prec UBANG {
-    printf("  test eax, eax\n");
-    printf("  setz al\n");
-    printf("  movzx eax, al\n");
-  }
 | INCREMENT lvalue {
     printf("  add DWORD PTR [eax], 1\n");
     printf("  mov eax, DWORD PTR [eax]\n");
@@ -595,7 +587,6 @@ rvalue:
     printf("  sub DWORD PTR [eax], 1\n");
     printf("  mov eax, ecx\n");
   }
-| AMPERSAND lvalue %prec UAMPERSAND
 | rvalue OR {
     printf("  push eax\n");
   } rvalue {
@@ -715,6 +706,15 @@ rvalue:
   } COLON rvalue {
     printf(".LT%zu:\n", ++label_tern);
   }
+| MINUS rvalue %prec UMINUS {
+    printf("  neg eax\n");
+  }
+| BANG rvalue %prec UBANG {
+    printf("  test eax, eax\n");
+    printf("  setz al\n");
+    printf("  movzx eax, al\n");
+  }
+| AMPERSAND lvalue %prec UAMPERSAND
 | rvalue LPAREN {
     printf("  push eax\n");
   } opt_arguments RPAREN {
