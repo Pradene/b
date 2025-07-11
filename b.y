@@ -125,7 +125,7 @@ int handle_escape_char(char c) {
 %right    UMINUS UBANG UASTERISK UAMPERSAND INCREMENT DECREMENT /* Unary operators */
 %nonassoc LBRACKET RBRACKET                                     /* Array subscript */
 %nonassoc LPAREN RPAREN                                         /* Function call */
-%nonassoc LBRACE RBRACE
+%nonassoc LBRACE RBRACE                                         /* Scope */
 
 %start program
 
@@ -305,7 +305,7 @@ statement:
     printf("  jmp .LW%zu\n", --label_while);
     printf(".LW%zu:\n", ++label_while);
   }
-| SWITCH rvalue {
+| SWITCH LPAREN rvalue RPAREN {
     printf("  mov ebx, eax\n");
   } statement
 | CASE constant {
@@ -329,8 +329,12 @@ statement:
 | RETURN return SEMICOLON {
     printf("  jmp .LF%zu\n", label_fn);
   }
-| rvalue SEMICOLON
-| SEMICOLON
+| opt_rvalue SEMICOLON
+;
+
+opt_rvalue:
+  /* Empty */
+| rvalue
 ;
 
 return:
@@ -387,7 +391,6 @@ lvalue:
       free($1);
       YYERROR;
     }
-
     switch (symbol->storage) {
       case AUTOMATIC:
         printf("  lea eax, [ebp - %zu]\n", symbol->offset);
@@ -404,7 +407,6 @@ lvalue:
       default:
         break ;
     }
-
     pointer = symbol->type;
     free($1);
   }
@@ -419,13 +421,13 @@ lvalue:
   }
 ;
 
+
 rvalue:
   LPAREN rvalue RPAREN
 | lvalue %prec LVALUE {
     if (pointer == VARIABLE) {
       printf("  mov eax, DWORD PTR [eax]\n");
     }
-
     pointer = 0;
   }
 | constant {
@@ -725,7 +727,6 @@ rvalue:
       printf("  mov [esp + %d], ebx\n", ($4 - i) * 4);
       printf("  mov [esp + %d], ecx\n", i * 4);
     }
-
     printf("  pop eax\n");
     printf("  call [eax]\n");
     if ($4 > 0) {
