@@ -62,10 +62,10 @@ goto        { return GOTO; }
 
 "="         { return ASSIGN; }
 "=|"        { return ASSIGN_OR; }
-"=&"        { return ASSIGN_AMPERSAND; }
+"=&"        { return ASSIGN_AND; }
 "=+"        { return ASSIGN_PLUS; }
 "=-"        { return ASSIGN_MINUS; }
-"=*"        { return ASSIGN_ASTERISK; }
+"=*"        { return ASSIGN_MUL; }
 "=/"        { return ASSIGN_DIV; }
 "=%"        { return ASSIGN_MOD; }
 "==="       { return ASSIGN_EQ; }

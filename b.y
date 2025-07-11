@@ -50,6 +50,11 @@ int handle_escape_char(char c) {
   int   number;
 }
 
+%type <string> constant opt_constant
+%type <string> array opt_array
+%type <number> arguments opt_arguments
+%type <string> value
+
 %token <string> ID
 %token <string> NUMBER
 %token <string> STRING
@@ -71,7 +76,7 @@ int handle_escape_char(char c) {
 %token BANG
 %token QUESTION
 %token COLON
-%token ASSIGN ASSIGN_OR ASSIGN_AMPERSAND ASSIGN_EQ ASSIGN_NE ASSIGN_LT ASSIGN_LTE ASSIGN_GT ASSIGN_GTE ASSIGN_LSHIFT ASSIGN_RSHIFT ASSIGN_PLUS ASSIGN_MINUS ASSIGN_MOD ASSIGN_ASTERISK ASSIGN_DIV
+%token ASSIGN ASSIGN_OR ASSIGN_AND ASSIGN_EQ ASSIGN_NE ASSIGN_LT ASSIGN_LTE ASSIGN_GT ASSIGN_GTE ASSIGN_LSHIFT ASSIGN_RSHIFT ASSIGN_PLUS ASSIGN_MINUS ASSIGN_MOD ASSIGN_MUL ASSIGN_DIV
 %token AMPERSAND
 %token ASTERISK
 %token GTE
@@ -88,42 +93,38 @@ int handle_escape_char(char c) {
 %token RSHIFT LSHIFT
 %token INCREMENT DECREMENT
 
-%type <string> constant opt_constant
-%type <string> array opt_array
-%type <number> arguments opt_arguments
-%type <string> value
-
+/* Ordered from LOWEST to HIGHEST precedence */
 %nonassoc EMPTY
-%nonassoc SEMICOLON
 %nonassoc ID
 %nonassoc LVALUE
-
-/* Precedence and associativity - lowest to highest precedence */
-%right ASSIGN
-      ASSIGN_OR
-      ASSIGN_AMPERSAND
-      ASSIGN_EQ
-      ASSIGN_NE
-      ASSIGN_LT
-      ASSIGN_LTE
-      ASSIGN_GT
-      ASSIGN_GTE
-      ASSIGN_LSHIFT
-      ASSIGN_RSHIFT
-      ASSIGN_PLUS
-      ASSIGN_MINUS
-      ASSIGN_MOD
-      ASSIGN_ASTERISK
-      ASSIGN_DIV                                             /* Assignment operators */
-%right QUESTION COLON                                        /* Conditional expression */
-%left  OR AMPERSAND                                          /* AND/OR operators */
-%left  EQ NE                                                 /* Equality operators */
-%left  LT LTE GT GTE                                         /* Relational operators */
-%left  LSHIFT RSHIFT PLUS MINUS                              /* Additive operators */
-%left  ASTERISK DIV MOD                                      /* Multiplicative operators */
-%right UMINUS UBANG UASTERISK UAMPERSAND INCREMENT DECREMENT /* Unary operators */
-%left  LBRACKET RBRACKET                                     /* Array subscript */
-%left  LPAREN RPAREN                                         /* Parenthesis */
+%right    ASSIGN
+          ASSIGN_OR
+          ASSIGN_AND
+          ASSIGN_EQ
+          ASSIGN_NE
+          ASSIGN_LT
+          ASSIGN_LTE
+          ASSIGN_GT
+          ASSIGN_GTE
+          ASSIGN_LSHIFT
+          ASSIGN_RSHIFT
+          ASSIGN_PLUS
+          ASSIGN_MINUS
+          ASSIGN_MOD
+          ASSIGN_MUL
+          ASSIGN_DIV                                            /* Assignment operators */
+%right    QUESTION COLON                                        /* Conditional expression */
+%left     OR AMPERSAND                                          /* Logical OR/AND */
+%left     EQ NE                                                 /* Equality operators */
+%left     LT LTE GT GTE                                         /* Relational operators */
+%left     LSHIFT RSHIFT                                         /* Bitwise shifts */
+%left     PLUS MINUS                                            /* Additive operators */
+%left     ASTERISK DIV MOD                                      /* Multiplicative operators */
+%right    UMINUS UBANG UASTERISK UAMPERSAND INCREMENT DECREMENT /* Unary operators */
+%left     LBRACKET RBRACKET                                     /* Array subscript */
+%left     LPAREN RPAREN                                         /* Function call */
+%left     LBRACE RBRACE                                         /* Function call */
+%nonassoc SEMICOLON                                             /* Semicolon */
 
 %start program
 
@@ -444,7 +445,7 @@ rvalue:
     printf("  or [ecx], eax\n");
     printf("  mov eax, [ecx]\n");
   }
-| lvalue ASSIGN_AMPERSAND {
+| lvalue ASSIGN_AND {
     printf("  push eax\n");
   } rvalue {
     printf("  pop ecx\n");
@@ -550,7 +551,7 @@ rvalue:
     printf("  mov eax, edx\n");
     printf("  mov [ecx], eax\n");
   }
-| lvalue ASSIGN_ASTERISK {
+| lvalue ASSIGN_MUL {
     printf("  push eax\n");
   } rvalue {
     printf("  mov edx, eax\n");
