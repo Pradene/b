@@ -94,7 +94,7 @@ int handle_escape_char(char c) {
 %token INCREMENT DECREMENT
 
 /* Ordered from LOWEST to HIGHEST precedence */
-%nonassoc EMPTY
+%nonassoc SEMICOLON
 %nonassoc ID
 %nonassoc LVALUE
 %right    ASSIGN
@@ -124,7 +124,6 @@ int handle_escape_char(char c) {
 %left     LBRACKET RBRACKET                                     /* Array subscript */
 %left     LPAREN RPAREN                                         /* Function call */
 %left     LBRACE RBRACE                                         /* Function call */
-%nonassoc SEMICOLON                                             /* Semicolon */
 
 %start program
 
@@ -143,7 +142,7 @@ program:
 ;
 
 definitions:
-  /* Empty */ %prec EMPTY
+  /* Empty */
 | definitions definition
 ;
 
@@ -192,8 +191,8 @@ array:
 ;
 
 opt_array:
-  /* Empty */ %prec EMPTY { $$ = NULL; }
-| array                   { $$ = $1; }
+  /* Empty */ { $$ = NULL; }
+| array       { $$ = $1; }
 ;
 
 parameters:
@@ -208,7 +207,7 @@ parameters:
 ;
 
 opt_parameters:
-  /* Empty */ %prec EMPTY
+  /* Empty */
 | parameters
 ;
 
@@ -253,8 +252,8 @@ constant:
 ;
 
 opt_constant:
-  /* Empty */ %prec EMPTY { $$ = NULL; }
-| constant                { $$ = $1; }
+  /* Empty */ { $$ = NULL; }
+| constant    { $$ = $1; }
 ;
 
 value:
@@ -274,13 +273,12 @@ values:
 ;
 
 opt_values:
-  /* Empty */ %prec EMPTY
+  /* Empty */
 | values
 ;
 
 statement:
-  /* Empty */ %prec EMPTY
-| AUTO auto SEMICOLON
+  AUTO auto SEMICOLON
 | EXTRN extrn SEMICOLON
 | LBRACE {
     scope_create();
@@ -334,12 +332,12 @@ statement:
 ;
 
 return:
-  /* Empty */ %prec EMPTY
+  /* Empty */
 | LPAREN rvalue RPAREN
 ;
 
 statements:
-  /* Empty */ %prec EMPTY
+  /* Empty */
 | statements statement
 ;
 
@@ -375,7 +373,7 @@ extrn:
 ;
 
 else:
-  /* Empty */ %prec EMPTY
+  /* Empty */
 | ELSE statement
 ;
 
@@ -746,8 +744,8 @@ arguments:
 ;
 
 opt_arguments:
-  /* Empty */ %prec EMPTY { $$ = 0; }
-| arguments               { $$ = $1; }
+  /* Empty */ { $$ = 0; }
+| arguments   { $$ = $1; }
 ;
 
 %%
