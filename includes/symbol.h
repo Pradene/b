@@ -9,7 +9,7 @@
 typedef struct Scope Scope;
 
 typedef enum { EXTERNAL, AUTOMATIC, INTERNAL, LABEL } Storage;
-typedef enum { VARIABLE, POINTER } SymbolType;
+typedef enum { NONE, VARIABLE, POINTER } SymbolType;
 
 typedef struct {
   char *name;

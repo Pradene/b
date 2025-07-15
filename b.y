@@ -95,9 +95,7 @@ int handle_escape_char(char c) {
 
 /* Ordered from LOWEST to HIGHEST precedence */
 %nonassoc EMPTY
-%nonassoc ID
 %nonassoc ELSE
-%nonassoc LVALUE
 %right    ASSIGN
           ASSIGN_OR
           ASSIGN_AND
@@ -216,37 +214,22 @@ opt_parameters:
 constant:
   NUMBER { $$ = $1; }
 | CHAR {
-    char *s = $1;
-
-    int c;
-    if (s[1] == '\\') {
-      c = handle_escape_char(s[2]);
-    } else {
-      c = (int)s[1];
-    }
-
     char *buf = (char *)malloc(32);
-    if (buf == NULL) {
-      exit(1);
-    }
-
+    if (buf == NULL) exit(1);
+    char *s = $1;
+    int c = (s[1] == '\\') ? handle_escape_char(s[2]) : (int)s[1];
     sprintf(buf, "%d", c);
     $$ = buf;
     free($1);
   }
 | STRING {
+    char* buf = (char *)malloc(32);
+    if (buf == NULL) exit(1);
     printf(".section .rodata\n");
     printf(".LC%zu:\n", label_const);
-
     printf("  .long .LC%zu + 4\n", label_const);
     printf("  .string %s\n", $1);
     printf(".text\n");
-
-    char* buf = (char *)malloc(32);
-    if (buf == NULL) {
-      exit(1);
-    }
-
     sprintf(buf, ".LC%zu", label_const++);
     $$ = buf;
     free($1);
@@ -387,7 +370,11 @@ lvalue:
   ID {
     Symbol *symbol = symbol_find_global($1);
     if (symbol == NULL) {
-      fprintf(stderr, "Error: %d:%d: Undefined variable %s\n", @1.first_line, @1.first_column, $1);
+      fprintf(
+        stderr,
+        "Error: %d:%d: Undefined variable %s\n",
+        @1.first_line, @1.first_column, $1
+      );
       free($1);
       YYERROR;
     }
@@ -410,25 +397,29 @@ lvalue:
     pointer = symbol->type;
     free($1);
   }
-| ASTERISK rvalue %prec UASTERISK
-| rvalue LBRACKET {
+| ASTERISK rvalue %prec UASTERISK {
+    pointer = VARIABLE;
+  }
+| lvalue LBRACKET {
+    printf("  mov eax, DWORD PTR [eax]\n");
     printf("  push eax\n");
   } rvalue RBRACKET {
     printf("  mov ecx, eax\n");
     printf("  shl ecx, 2\n");
     printf("  pop eax\n");
     printf("  add eax, ecx\n");
+    pointer = VARIABLE;
   }
 ;
 
 
 rvalue:
   LPAREN rvalue RPAREN
-| lvalue %prec LVALUE {
+| lvalue %prec EMPTY {
     if (pointer == VARIABLE) {
       printf("  mov eax, DWORD PTR [eax]\n");
     }
-    pointer = 0;
+    pointer = NONE;
   }
 | constant {
     printf("  mov eax, %s\n", $1);
