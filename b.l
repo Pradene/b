@@ -9,7 +9,8 @@ int yycolumn = 0;
                        yycolumn += yyleng;
 %}
 
-NUMBER      [0-9]+(\.[0-9]+)?
+NUMBER      0|[1-9][0-9]*
+OCTAL       0[0-7]+
 ID          [a-zA-Z_][a-zA-Z0-9_]*
 
 %option noyywrap
@@ -78,12 +79,18 @@ goto        { return GOTO; }
 "=>>"       { return ASSIGN_RSHIFT; }
 
 {NUMBER}    {
-    yylval.string = strdup(yytext);
-    return NUMBER;
+  yylval.string = strdup(yytext);
+  return NUMBER;
 }
+
+{OCTAL}     {
+  yylval.string = strdup(yytext);
+  return NUMBER;
+}
+
 {ID}        { 
-    yylval.string = strdup(yytext);
-    return ID;
+  yylval.string = strdup(yytext);
+  return ID;
 }
 
 "/*"               { BEGIN(COMMENT); }
@@ -94,18 +101,18 @@ goto        { return GOTO; }
 }
 
 '[^'\\]'           {
-    yylval.string = strdup(yytext);
-    return CHAR;
+  yylval.string = strdup(yytext);
+  return CHAR;
 }
 
 '\\[0abtnvfre\'\"\\?]' {
-    yylval.string = strdup(yytext);
-    return CHAR;
+  yylval.string = strdup(yytext);
+  return CHAR;
 }
 
 \"[^\"]*\"  {
-    yylval.string = strdup(yytext);
-    return STRING;
+  yylval.string = strdup(yytext);
+  return STRING;
 }
 
 [ \t]+      { /* ignore whitespace */ }
