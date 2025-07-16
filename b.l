@@ -98,7 +98,7 @@ goto        { return GOTO; }
     return CHAR;
 }
 
-'\\[0ent()\'\"*]' {
+'\\[0abtnvfre\'\"\\?]' {
     yylval.string = strdup(yytext);
     return CHAR;
 }
