@@ -9,7 +9,7 @@ int yycolumn = 0;
                        yycolumn += yyleng;
 %}
 
-NUMBER      0|[1-9][0-9]*
+DECIMAL     0|[1-9][0-9]*
 OCTAL       0[0-7]+
 ID          [a-zA-Z_][a-zA-Z0-9_]*
 
@@ -31,35 +31,36 @@ if          { return IF; }
 else        { return ELSE; }
 while       { return WHILE; }
 goto        { return GOTO; }
-";"         { return SEMICOLON; }
-"("         { return LPAREN; }
-")"         { return RPAREN; }
-"["         { return LBRACKET; }
-"]"         { return RBRACKET; }
-"{"         { return LBRACE; }
-"}"         { return RBRACE; }
-","         { return COMMA; }
-"!"         { return BANG; }
-"?"         { return QUESTION; }
-":"         { return COLON; }
+";"         { return ';'; }
+"("         { return '('; }
+")"         { return ')'; }
+"["         { return '['; }
+"]"         { return ']'; }
+"{"         { return '{'; }
+"}"         { return '}'; }
+","         { return ','; }
+"!"         { return '!'; }
+"?"         { return '?'; }
+":"         { return ':'; }
 
-"&"         { return AMPERSAND; }
-"*"         { return ASTERISK; }
+"&"         { return '&'; }
+"*"         { return '*'; }
+"/"         { return '/'; }
+"+"         { return '+'; }
+"-"         { return '-'; }
+"%"         { return '%'; }
+"|"         { return '|'; }
+">>"        { return RSHIFT; }
+"<<"        { return LSHIFT; }
+"++"        { return INCREMENT; }
+"--"        { return DECREMENT; }
+
 ">="        { return GTE; }
 ">"         { return GT; }
 "<="        { return LTE; }
 "<"         { return LT; }
 "=="        { return EQ; }
 "!="        { return NE; }
-"/"         { return DIV; }
-"+"         { return PLUS; }
-"-"         { return MINUS; }
-"%"         { return MOD; }
-"|"         { return OR; }
-">>"        { return RSHIFT; }
-"<<"        { return LSHIFT; }
-"++"        { return INCREMENT; }
-"--"        { return DECREMENT; }
 
 "="         { return ASSIGN; }
 "=|"        { return ASSIGN_OR; }
@@ -78,7 +79,7 @@ goto        { return GOTO; }
 "=<<"       { return ASSIGN_LSHIFT; }
 "=>>"       { return ASSIGN_RSHIFT; }
 
-{NUMBER}    {
+{DECIMAL}   {
   yylval.string = strdup(yytext);
   return NUMBER;
 }
@@ -93,14 +94,14 @@ goto        { return GOTO; }
   return ID;
 }
 
-"/*"               { BEGIN(COMMENT); }
+"/*"        { BEGIN(COMMENT); }
 <COMMENT>{
-  "*/"             { BEGIN(INITIAL); }
-  .|\n             {}
-  <<EOF>>          { fprintf(stderr, "Unterminated comment\n"); exit(1); }
+  "*/"      { BEGIN(INITIAL); }
+  .|\n      {}
+  <<EOF>>   { fprintf(stderr, "Unterminated comment\n"); exit(1); }
 }
 
-'[^'\\]'           {
+'[^'\\]'    {
   yylval.string = strdup(yytext);
   return CHAR;
 }

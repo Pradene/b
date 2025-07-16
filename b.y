@@ -68,28 +68,28 @@ int handle_escape_char(char c) {
 %token ELSE
 %token WHILE
 %token GOTO
-%token SEMICOLON
-%token LPAREN RPAREN
-%token LBRACKET RBRACKET
-%token LBRACE RBRACE
-%token COMMA
-%token BANG
-%token QUESTION
-%token COLON
-%token ASSIGN ASSIGN_OR ASSIGN_AND ASSIGN_EQ ASSIGN_NE ASSIGN_LT ASSIGN_LTE ASSIGN_GT ASSIGN_GTE ASSIGN_LSHIFT ASSIGN_RSHIFT ASSIGN_PLUS ASSIGN_MINUS ASSIGN_MOD ASSIGN_MUL ASSIGN_DIV
-%token AMPERSAND
-%token ASTERISK
+%token ASSIGN
+      ASSIGN_OR 
+      ASSIGN_AND 
+      ASSIGN_EQ 
+      ASSIGN_NE 
+      ASSIGN_LT 
+      ASSIGN_LTE
+      ASSIGN_GT
+      ASSIGN_GTE
+      ASSIGN_LSHIFT
+      ASSIGN_RSHIFT
+      ASSIGN_PLUS
+      ASSIGN_MINUS
+      ASSIGN_MOD
+      ASSIGN_MUL
+      ASSIGN_DIV
 %token GTE
 %token GT
 %token LTE
 %token LT
 %token EQ
 %token NE
-%token DIV
-%token PLUS
-%token MINUS
-%token MOD
-%token OR
 %token RSHIFT LSHIFT
 %token INCREMENT DECREMENT
 
@@ -111,19 +111,19 @@ int handle_escape_char(char c) {
           ASSIGN_MINUS
           ASSIGN_MOD
           ASSIGN_MUL
-          ASSIGN_DIV                                            /* Assignment operators */
-%right    QUESTION COLON                                        /* Conditional expression */
-%left     OR                                                    /* Logical OR */
-%left     AMPERSAND                                             /* Logical OR */
-%left     EQ NE                                                 /* Equality operators */
-%left     LT LTE GT GTE                                         /* Relational operators */
-%left     LSHIFT RSHIFT                                         /* Bitwise shifts */
-%left     PLUS MINUS                                            /* Additive operators */
-%left     ASTERISK DIV MOD                                      /* Multiplicative operators */
-%right    UMINUS UBANG UASTERISK UAMPERSAND INCREMENT DECREMENT /* Unary operators */
-%nonassoc LBRACKET RBRACKET                                     /* Array subscript */
-%nonassoc LPAREN RPAREN                                         /* Function call */
-%nonassoc LBRACE RBRACE                                         /* Scope */
+          ASSIGN_DIV                              /* Assignment operators */
+%right    '?' ':'                                 /* Ternary expression */
+%left     '|'                                     /* Logical OR */
+%left     '&'                                     /* Logical AND */
+%left     EQ NE                                   /* Equality operators */
+%left     LT LTE GT GTE                           /* Relational operators */
+%left     LSHIFT RSHIFT                           /* Bitwise shifts */
+%left     '+' '-'                                 /* Additive operators */
+%left     '*' '/' '%'                             /* Multiplicative operators */
+%right    MINUS NOT DEREF REF INCREMENT DECREMENT /* Unary operators */
+%nonassoc '[' ']'                                 /* Array subscript */
+%nonassoc '(' ')'                                 /* Function call */
+%nonassoc '{' '}'                                 /* Scope */
 
 %start program
 
@@ -166,8 +166,8 @@ definition:
     }
     if ($2 != NULL) free($2);
     free($1);
-  } opt_ivals SEMICOLON {}
-| ID LPAREN {
+  } opt_ivals ';' {}
+| ID '(' {
     symbol_add($1, POINTER, EXTERNAL);
     scope_create();
     printf(".text\n");
@@ -177,7 +177,7 @@ definition:
     printf("  push ebp\n");
     printf("  mov ebp, esp\n");
     free($1);
-  } opt_parameters RPAREN statement {
+  } opt_parameters ')' statement {
     printf(".LF%zu:\n", label_fn++);
     printf("  mov esp, ebp\n");
     printf("  pop ebp\n");
@@ -187,7 +187,7 @@ definition:
 ;
 
 array:
-  LBRACKET opt_constant RBRACKET { $$ = $2; }
+  '[' opt_constant ']' { $$ = $2; }
 ;
 
 opt_array:
@@ -200,7 +200,7 @@ parameters:
     symbol_add($1, VARIABLE, INTERNAL);
     free($1);
   }
-| parameters COMMA ID {
+| parameters ',' ID {
     symbol_add($3, VARIABLE, INTERNAL);
     free($3);
   }
@@ -251,7 +251,7 @@ ivals:
     printf("  .long %s\n", $1);
     free($1);
   }
-| ivals COMMA ival {
+| ivals ',' ival {
     printf("  .long %s\n", $3);
     free($3);
   }
@@ -263,17 +263,17 @@ opt_ivals:
 ;
 
 statement:
-  AUTO auto SEMICOLON statement
-| EXTRN extrn SEMICOLON statement
-| LBRACE {
+  AUTO auto ';' statement
+| EXTRN extrn ';' statement
+| '{' {
     scope_create();
-  } statements RBRACE {
+  } statements '}' {
     scope_destroy();
   }
-| IF LPAREN rvalue {
+| IF '(' rvalue {
     printf("  test eax, eax\n");
     printf("  jz .LIE%zu\n", ++label_if);
-  } RPAREN statement {
+  } ')' statement {
     printf("  jmp .LIE%zu\n", ++label_if);
     printf(".LIE%zu:\n", --label_if);
   } else {
@@ -281,38 +281,38 @@ statement:
   }
 | WHILE {
     printf(".LW%zu:\n", ++label_while);
-  } LPAREN rvalue RPAREN {
+  } '(' rvalue ')' {
     printf("  test eax, eax\n");
     printf("  jz .LW%zu\n", ++label_while);
   } statement {
     printf("  jmp .LW%zu\n", --label_while);
     printf(".LW%zu:\n", ++label_while);
   }
-| SWITCH LPAREN rvalue RPAREN {
+| SWITCH '(' rvalue ')' {
     printf("  mov ebx, eax\n");
   } statement
 | CASE constant {
     printf("  mov eax, %s\n", $2);
-  } COLON {
+  } ':' {
     printf("  cmp ebx, eax\n");
     printf("  jnz .LS%zu\n", label_switch);
     free($2);
   } statement {
     printf(".LS%zu:\n", label_switch++);
   }
-| ID COLON {
+| ID ':' {
     symbol_add($1, POINTER, LABEL);
     printf(".%s:\n", $1);
     printf("  .long .%s + 4\n", $1);
     free($1);
   } statement
-| GOTO rvalue SEMICOLON {
+| GOTO rvalue ';' {
     printf("  jmp [eax]\n");
   }
-| RETURN return SEMICOLON {
+| RETURN return ';' {
     printf("  jmp .LF%zu\n", label_fn);
   }
-| opt_rvalue SEMICOLON
+| opt_rvalue ';'
 ;
 
 opt_rvalue:
@@ -322,7 +322,7 @@ opt_rvalue:
 
 return:
   /* Empty */ %prec EMPTY
-| LPAREN rvalue RPAREN
+| '(' rvalue ')'
 ;
 
 statements:
@@ -332,7 +332,7 @@ statements:
 
 auto:
   auto_def
-| auto COMMA auto_def
+| auto ',' auto_def
 ;
 
 auto_def:
@@ -354,7 +354,7 @@ extrn:
     printf(".extern %s\n", $1);
     free($1);
   }
-| extrn COMMA ID {
+| extrn ',' ID {
     symbol_add($3, POINTER, EXTERNAL);
     printf(".extern %s\n", $3);
     free($3);
@@ -393,13 +393,13 @@ lvalue:
     pointer = symbol->type;
     free($1);
   }
-| ASTERISK rvalue %prec UASTERISK {
+| '*' rvalue %prec DEREF {
     pointer = VARIABLE;
   }
-| lvalue LBRACKET {
+| lvalue '[' {
     printf("  mov eax, DWORD PTR [eax]\n");
     printf("  push eax\n");
-  } rvalue RBRACKET {
+  } rvalue ']' {
     printf("  mov ecx, eax\n");
     printf("  shl ecx, 2\n");
     printf("  pop eax\n");
@@ -410,7 +410,7 @@ lvalue:
 
 
 rvalue:
-  LPAREN rvalue RPAREN
+  '(' rvalue ')'
 | lvalue %prec EMPTY {
     if (pointer == VARIABLE) {
       printf("  mov eax, DWORD PTR [eax]\n");
@@ -577,18 +577,6 @@ rvalue:
     printf("  sub DWORD PTR [eax], 1\n");
     printf("  mov eax, ecx\n");
   }
-| rvalue OR {
-    printf("  push eax\n");
-  } rvalue {
-    printf("  pop ecx\n");
-    printf("  or eax, ecx\n");
-  }
-| rvalue AMPERSAND {
-    printf("  push eax\n");
-  } rvalue {
-    printf("  pop ecx\n");
-    printf("  and eax, ecx\n");
-  }
 | rvalue EQ {
     printf("  push eax\n");
   } rvalue {
@@ -637,6 +625,54 @@ rvalue:
     printf("  setge al\n");
     printf("  movzx eax, al\n");
   }
+| rvalue '|' {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  or eax, ecx\n");
+  }
+| rvalue '&' {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  and eax, ecx\n");
+  }
+| rvalue '+' {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  add eax, ecx\n");
+  }
+| rvalue '-' {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  sub ecx, eax\n");
+    printf("  mov eax, ecx\n");
+  }
+| rvalue '*' {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  pop ecx\n");
+    printf("  imul eax, ecx\n");
+  }
+| rvalue '/' {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  mov ecx, eax\n");
+    printf("  pop eax\n");
+    printf("  cdq\n");
+    printf("  idiv ecx\n");
+  }
+| rvalue '%' {
+    printf("  push eax\n");
+  } rvalue {
+    printf("  mov ecx, eax\n");
+    printf("  pop eax\n");
+    printf("  cdq\n");
+    printf("  idiv ecx\n");
+    printf("  mov eax, edx\n");
+  }
 | rvalue LSHIFT {
     printf("  push eax\n");
   } rvalue {
@@ -651,63 +687,27 @@ rvalue:
     printf("  pop eax\n");
     printf("  shr eax, cl\n");
   }
-| rvalue PLUS {
-    printf("  push eax\n");
-  } rvalue {
-    printf("  pop ecx\n");
-    printf("  add eax, ecx\n");
-  }
-| rvalue MINUS {
-    printf("  push eax\n");
-  } rvalue {
-    printf("  pop ecx\n");
-    printf("  sub ecx, eax\n");
-    printf("  mov eax, ecx\n");
-  }
-| rvalue ASTERISK {
-    printf("  push eax\n");
-  } rvalue {
-    printf("  pop ecx\n");
-    printf("  imul eax, ecx\n");
-  }
-| rvalue DIV {
-    printf("  push eax\n");
-  } rvalue {
-    printf("  mov ecx, eax\n");
-    printf("  pop eax\n");
-    printf("  cdq\n");
-    printf("  idiv ecx\n");
-  }
-| rvalue MOD {
-    printf("  push eax\n");
-  } rvalue {
-    printf("  mov ecx, eax\n");
-    printf("  pop eax\n");
-    printf("  cdq\n");
-    printf("  idiv ecx\n");
-    printf("  mov eax, edx\n");
-  }
-| rvalue QUESTION {
+| rvalue '?' {
     printf("  test eax, eax\n");
     printf("  jz .LT%zu\n", ++label_tern);
   } rvalue {
     printf("  jmp .LT%zu\n", ++label_tern);
     printf(".LT%zu:\n", --label_tern);
-  } COLON rvalue {
+  } ':' rvalue {
     printf(".LT%zu:\n", ++label_tern);
   }
-| MINUS rvalue %prec UMINUS {
+| '-' rvalue %prec MINUS {
     printf("  neg eax\n");
   }
-| BANG rvalue %prec UBANG {
+| '!' rvalue %prec NOT {
     printf("  test eax, eax\n");
     printf("  setz al\n");
     printf("  movzx eax, al\n");
   }
-| AMPERSAND lvalue %prec UAMPERSAND
-| rvalue LPAREN {
+| '&' lvalue %prec REF
+| rvalue '(' {
     printf("  push eax\n");
-  } opt_arguments RPAREN {
+  } opt_arguments ')' {
     for (int i = 0; i < ($4 + 1) / 2; ++i) {
       printf("  mov ebx, [esp + %d]\n", i * 4);
       printf("  mov ecx, [esp + %d]\n", ($4 - i) * 4);
@@ -727,7 +727,7 @@ arguments:
     printf("  push eax\n");
     $$ = 1;
   }
-| arguments COMMA rvalue {
+| arguments ',' rvalue {
     printf("  push eax\n");
     $$ = $1 + 1;
   }
