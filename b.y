@@ -53,7 +53,7 @@ int handle_escape_char(char c) {
 %type <string> constant opt_constant
 %type <string> array opt_array
 %type <number> arguments opt_arguments
-%type <string> value
+%type <string> ival
 
 %token <string> ID
 %token <string> NUMBER
@@ -166,7 +166,7 @@ definition:
     }
     if ($2 != NULL) free($2);
     free($1);
-  } opt_values SEMICOLON {}
+  } opt_ivals SEMICOLON {}
 | ID LPAREN {
     symbol_add($1, POINTER, EXTERNAL);
     scope_create();
@@ -241,25 +241,25 @@ opt_constant:
 | constant                { $$ = $1; }
 ;
 
-value:
+ival:
   constant  { $$ = $1; }
 | ID        { $$ = $1; }
 ;
 
-values:
-  value {
+ivals:
+  ival {
     printf("  .long %s\n", $1);
     free($1);
   }
-| values COMMA value {
+| ivals COMMA ival {
     printf("  .long %s\n", $3);
     free($3);
   }
 ;
 
-opt_values:
+opt_ivals:
   /* Empty */ %prec EMPTY
-| values
+| ivals
 ;
 
 statement:
@@ -370,13 +370,9 @@ lvalue:
   ID {
     Symbol *symbol = symbol_find_global($1);
     if (symbol == NULL) {
-      fprintf(
-        stderr,
-        "Error: %d:%d: Undefined variable %s\n",
-        @1.first_line, @1.first_column, $1
-      );
       free($1);
-      YYERROR;
+      yyerror("Undefined variable");
+      break ;
     }
     switch (symbol->storage) {
       case AUTOMATIC:
@@ -745,7 +741,7 @@ opt_arguments:
 %%
 
 void yyerror(const char *s) {
-  fprintf(stderr, "Error: %s %d:%d: %s '%s'\n", __FILE__, yylineno, yycolumn, s, yytext);
+  fprintf(stderr, "Error: %d:%d: %s '%s'\n", yylineno, yycolumn, s, yytext);
 }
 
 int main(void) {
