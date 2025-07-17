@@ -7,19 +7,20 @@ BISON = bison
 
 # Directories
 SRCS_DIR = srcs
+BUILD_DIR = build
 INCS_DIR = includes
 EXAMPLES_DIR = examples
 TEST_DIR = test
 
 # Files
-LEX_INPUT = b.l
-PARSER_INPUT = b.y
+LEX_INPUT = $(SRCS_DIR)/b.l
+PARSER_INPUT = $(SRCS_DIR)/b.y
 
 STB = stb.a
 STB_DIR = stb
 
-LEX_OUTPUT = $(SRCS_DIR)/lex.yy.c
-PARSER_OUTPUT = $(SRCS_DIR)/y.tab.c
+LEX_OUTPUT = $(BUILD_DIR)/lex.yy.c
+PARSER_OUTPUT = $(BUILD_DIR)/y.tab.c
 PARSER_HEADER = $(INCS_DIR)/y.tab.h
 
 NAME = B
@@ -33,19 +34,19 @@ BINARIES = $(patsubst $(EXAMPLES_DIR)/%.b,$(TEST_DIR)/%,$(EXAMPLES))
 all: $(NAME) $(STB)
 
 # Create necessary directories
-$(SRCS_DIR):
-	@mkdir -p $(SRCS_DIR)
+$(BUILD_DIR):
+	@mkdir -p $(BUILD_DIR)
 
 $(TEST_DIR):
 	@mkdir -p $(TEST_DIR)
 
 # Parser generation
-$(PARSER_OUTPUT) $(PARSER_HEADER): $(PARSER_INPUT) | $(SRCS_DIR)
+$(PARSER_OUTPUT) $(PARSER_HEADER): $(PARSER_INPUT) | $(BUILD_DIR)
 	@$(BISON) -d -o $(PARSER_OUTPUT) $(PARSER_INPUT)
-	@mv $(SRCS_DIR)/y.tab.h $(PARSER_HEADER)
+	@mv $(BUILD_DIR)/y.tab.h $(PARSER_HEADER)
 
 # Lexer generation
-$(LEX_OUTPUT): $(LEX_INPUT) $(PARSER_HEADER) | $(SRCS_DIR)
+$(LEX_OUTPUT): $(LEX_INPUT) $(PARSER_HEADER) | $(BUILD_DIR)
 	@$(FLEX) -o $@ $(LEX_INPUT)
 
 # Compiler binary
@@ -83,7 +84,7 @@ $(STB):
 
 # Clean generated files
 clean:
-	@rm -rf $(SRCS_DIR) $(TEST_DIR) $(PARSER_HEADER)
+	@rm -rf $(BUILD_DIR) $(TEST_DIR) $(PARSER_HEADER)
 
 fclean: clean
 	@rm -f $(NAME)
