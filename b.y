@@ -1,6 +1,3 @@
-%glr-parser
-%expect-rr 54
-
 %{
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,6 +44,9 @@ int handle_escape_char(char c) {
   }
 }
 %}
+
+%glr-parser
+%expect-rr 54
 
 %union {
   char *string;
