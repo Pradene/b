@@ -1,3 +1,6 @@
+%glr-parser
+%expect-rr 54
+
 %{
 #include <stdio.h>
 #include <stdlib.h>
@@ -366,49 +369,6 @@ else:
 | ELSE statement
 ;
 
-lvalue:
-  ID {
-    Symbol *symbol = symbol_find_global($1);
-    if (symbol == NULL) {
-      free($1);
-      yyerror("Undefined variable");
-      break ;
-    }
-    switch (symbol->storage) {
-      case AUTOMATIC:
-        printf("  lea eax, [ebp - %zu]\n", symbol->offset);
-        break ;
-      case INTERNAL:
-        printf("  lea eax, [ebp + %zu]\n", symbol->offset);
-        break ;
-      case EXTERNAL:
-        printf("  lea eax, [%s]\n", symbol->name);
-        break ;
-      case LABEL:
-        printf("  lea eax, [.%s]\n", symbol->name);
-        break ;
-      default:
-        break ;
-    }
-    pointer = symbol->type;
-    free($1);
-  }
-| '*' rvalue %prec DEREF {
-    pointer = VARIABLE;
-  }
-| lvalue '[' {
-    printf("  mov eax, DWORD PTR [eax]\n");
-    printf("  push eax\n");
-  } rvalue ']' {
-    printf("  mov ecx, eax\n");
-    printf("  shl ecx, 2\n");
-    printf("  pop eax\n");
-    printf("  add eax, ecx\n");
-    pointer = VARIABLE;
-  }
-;
-
-
 rvalue:
   '(' rvalue ')'
 | lvalue %prec EMPTY {
@@ -737,6 +697,48 @@ opt_arguments:
   /* Empty */ %prec EMPTY { $$ = 0; }
 | arguments               { $$ = $1; }
 ;
+
+lvalue:
+  ID {
+    Symbol *symbol = symbol_find_global($1);
+    if (symbol == NULL) {
+      free($1);
+      yyerror("Undefined variable");
+      break ;
+    }
+    switch (symbol->storage) {
+      case AUTOMATIC:
+        printf("  lea eax, [ebp - %zu]\n", symbol->offset);
+        break ;
+      case INTERNAL:
+        printf("  lea eax, [ebp + %zu]\n", symbol->offset);
+        break ;
+      case EXTERNAL:
+        printf("  lea eax, [%s]\n", symbol->name);
+        break ;
+      case LABEL:
+        printf("  lea eax, [.%s]\n", symbol->name);
+        break ;
+      default:
+        break ;
+    }
+    pointer = symbol->type;
+    free($1);
+  } %dprec 1
+| '*' rvalue %prec DEREF {
+    pointer = VARIABLE;
+  }
+| rvalue '[' {
+    printf("  push eax\n");
+  } rvalue ']' {
+    printf("  mov ecx, eax\n");
+    printf("  shl ecx, 2\n");
+    printf("  pop eax\n");
+    printf("  add eax, ecx\n");
+    pointer = VARIABLE;
+  } %dprec 2
+;
+
 
 %%
 
