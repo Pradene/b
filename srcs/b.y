@@ -21,6 +21,10 @@ static size_t label_tern = 0;
 static size_t label_const = 0;
 static int    pointer = 0;
 
+static size_t else_label_stack[100];
+static size_t end_label_stack[100];
+static int label_stack_top = -1;
+
 /* Function to handle escape sequences like C */
 int handle_escape_char(char c) {
   switch(c) {
@@ -261,13 +265,17 @@ statement:
     scope_destroy();
   }
 | IF '(' rvalue {
+    label_stack_top++;
+    else_label_stack[label_stack_top] = label_if++;
+    end_label_stack[label_stack_top] = label_if++;
     printf("  test eax, eax\n");
-    printf("  jz .LIE%zu\n", ++label_if);
+    printf("  jz .LIE%zu\n", else_label_stack[label_stack_top]);
   } ')' statement {
-    printf("  jmp .LIE%zu\n", ++label_if);
-    printf(".LIE%zu:\n", --label_if);
+    printf("  jmp .LIE%zu\n", end_label_stack[label_stack_top]);
+    printf(".LIE%zu:\n", else_label_stack[label_stack_top]);
   } else {
-    printf(".LIE%zu:\n", ++label_if);
+    printf(".LIE%zu:\n", end_label_stack[label_stack_top]);
+    label_stack_top--;
   }
 | WHILE {
     printf(".LW%zu:\n", ++label_while);
