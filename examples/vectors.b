@@ -9,7 +9,7 @@ char(s, n)
 	return ((s[n / 4] >> (((n - 4) % 4) * 8)) & 255);
 }
 
-mmaparg [6] 0, 0, 3, 34, -1, 0;
+mmaparg [6] 0, 0, 3, 34, 4294967295, 0;
 alloc(n)
 {
 	extrn syscall, printn;
