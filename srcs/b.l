@@ -79,7 +79,7 @@ goto        { return GOTO; }
 "=<<"       { return ASSIGN_LSHIFT; }
 "=>>"       { return ASSIGN_RSHIFT; }
 
-{DECIMAL}   {
+[-+]?{DECIMAL}   {
   yylval.string = strdup(yytext);
   return NUMBER;
 }
