@@ -165,7 +165,6 @@ definition:
       printf(".globl %s\n", $1);
       printf("%s:\n", $1);
       printf("  .long \"%s\" + 4\n", $1);
-      printf("  .long 0\n");
     }
     if ($2 != NULL) free($2);
     free($1);
@@ -261,7 +260,7 @@ ivals:
 ;
 
 opt_ivals:
-  /* Empty */ %prec EMPTY
+  /* Empty */ %prec EMPTY { printf("  .long 0\n"); }
 | ivals
 ;
 
