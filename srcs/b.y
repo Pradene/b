@@ -151,21 +151,11 @@ definitions:
 
 definition:
   ID opt_array {
+    symbol_add($1, $2 != NULL ? POINTER : VARIABLE, EXTERNAL);
     printf(".data\n");
-    if ($2 != NULL) {
-      symbol_add($1, POINTER, EXTERNAL);
-      int size = atoi($2);
-      if (size <= 0) size = 1;
-      printf(".globl %s\n", $1);
-      printf("%s:\n", $1);
-      printf("  .long \"%s\" + 4\n", $1);
-      printf("  .space %d\n", size * 4);
-    } else {
-      symbol_add($1, VARIABLE, EXTERNAL);
-      printf(".globl %s\n", $1);
-      printf("%s:\n", $1);
-      printf("  .long \"%s\" + 4\n", $1);
-    }
+    printf(".globl %s\n", $1);
+    printf("%s:\n", $1);
+    printf("  .long \"%s\" + 4\n", $1);
     if ($2 != NULL) free($2);
     free($1);
   } opt_ivals ';' {}

@@ -1,42 +1,26 @@
-putchar(c) {
-  extrn syscall;
-  syscall(4, 1, &c, 1);
-}
-
-char(s, n) {
-  return ((s[n / 4] >> (((n - 4) % 4) * 8)) & 255);
-}
-
 mmaparg [6] 0, 0, 3, 34, 4294967295, 0;
 alloc(n) {
-  extrn syscall, printn;
+  extrn syscall;
   auto ret 0;
   mmaparg[1] = (n + 1) * 4;
   ret = syscall(90, mmaparg);
-  ret[0] = n;
+  ret[0] = mmaparg[1];
   ret =+ 4;
   return (ret);
 }
 
 free(p) {
   extrn syscall;
-  syscall(91, p - 4, p[-1]);
+  syscall(91, p - 4, *(p - 4));
 }
 
 putstr(s) {
+  extrn char, putchar;
   auto i 0;
   while (char(s, i)) {
     putchar(char(s, i));
     i++;
   }
-}
-
-printn(n,b) {
-  extrn putchar;
-  auto a;
-  if(a = n / b)
-    printn(a,b);
-  putchar(n % b + '0');
 }
 
 printArray(Array) {
@@ -62,6 +46,7 @@ STRING 2;
 FUNCTION 3;
 
 print(thing) {
+  extrn printn;
   auto type, data;
 
   type = thing[0];
@@ -88,7 +73,7 @@ makething(type, value) {
   return (p);
 }
 
-Array(size, data /*...*/) {
+Array(size, data) {
   auto i 0, ret;
 
   ret = alloc(20);
@@ -124,6 +109,9 @@ getsomething() {
 main() {
   auto v;
   Int(42);
+
+  /*
+
   print(Int(42));
   putchar('\n');
   print(Array(4, Int(1), Int(2), Int(3), Int(4)));
@@ -151,6 +139,8 @@ main() {
       Fun(getsomething)
     )
   );
+
+  */
 
   return (0);
 }
