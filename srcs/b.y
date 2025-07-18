@@ -155,8 +155,6 @@ definition:
     printf(".data\n");
     printf(".globl %s\n", $1);
     printf("%s:\n", $1);
-    printf("  .long \"%s\" + 4\n", $1);
-    if ($2 != NULL) free($2);
     free($1);
   } opt_ivals ';' {}
 | ID '(' {
@@ -185,6 +183,27 @@ array:
 opt_array:
   /* Empty */ %prec EMPTY { $$ = NULL; }
 | array                   { $$ = $1; }
+;
+
+ival:
+  constant  { $$ = $1; }
+| ID        { $$ = $1; }
+;
+
+ivals:
+  ival {
+    printf("  .long %s\n", $1);
+    free($1);
+  }
+| ivals ',' ival {
+    printf("  .long %s\n", $3);
+    free($3);
+  }
+;
+
+opt_ivals:
+  /* Empty */ %prec EMPTY { printf("  .long 0\n"); }
+| ivals
 ;
 
 parameters:
@@ -231,27 +250,6 @@ constant:
 opt_constant:
   /* Empty */ %prec EMPTY { $$ = NULL; }
 | constant                { $$ = $1; }
-;
-
-ival:
-  constant  { $$ = $1; }
-| ID        { $$ = $1; }
-;
-
-ivals:
-  ival {
-    printf("  .long %s\n", $1);
-    free($1);
-  }
-| ivals ',' ival {
-    printf("  .long %s\n", $3);
-    free($3);
-  }
-;
-
-opt_ivals:
-  /* Empty */ %prec EMPTY { printf("  .long 0\n"); }
-| ivals
 ;
 
 statement:
