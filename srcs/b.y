@@ -61,6 +61,7 @@ int handle_escape_char(char c) {
 %type <string> array opt_array
 %type <number> arguments opt_arguments
 %type <string> ival
+%type <number> ivals opt_ivals
 
 %token <string> ID
 %token <string> NUMBER
@@ -160,7 +161,23 @@ definition:
     printf(".globl %s\n", $1);
     printf("%s:\n", $1);
     free($1);
-  } opt_ivals ';' {}
+  } opt_ivals {
+    int size = ($2 != NULL) ? atoi($2) : 0;
+    int count = $4;
+    if (size > 0) {
+      if (count > size) {
+        yyerror("Too many initializers for array");
+      } else if (count < size) {
+        printf("  .space %d, 0\n", (size - count) * 4);
+      }
+    } else if ($2 != NULL) {
+    } else {
+      if (count > 1) {
+        yyerror("Excess initializers for non-array variable");
+      }
+    }
+    if ($2 != NULL) free($2);
+  } ';'
 | ID '(' {
     symbol_add($1, POINTER, EXTERNAL);
     scope_create();
@@ -198,16 +215,18 @@ ivals:
   ival {
     printf("  .long %s\n", $1);
     free($1);
+    $$ = 1;
   }
 | ivals ',' ival {
     printf("  .long %s\n", $3);
     free($3);
+    $$ = $1 + 1;
   }
 ;
 
 opt_ivals:
-  /* Empty */ %prec EMPTY { printf("  .long 0\n"); }
-| ivals
+  /* Empty */ %prec EMPTY { printf("  .long 0\n"); $$ = 0; }
+| ivals                   { $$ = $1; }
 ;
 
 parameters:
