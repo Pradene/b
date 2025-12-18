@@ -6,22 +6,22 @@ FLEX = flex
 BISON = bison
 
 # Directories
-SRCS_DIR = srcs
+SRC_DIR = src
 BUILD_DIR = build
-INCS_DIR = includes
+INC_DIR = include
 EXAMPLES_DIR = examples
 TEST_DIR = test
 
 # Files
-LEX_INPUT = $(SRCS_DIR)/b.l
-PARSER_INPUT = $(SRCS_DIR)/b.y
+LEX_INPUT = $(SRC_DIR)/b.l
+PARSER_INPUT = $(SRC_DIR)/b.y
 
 STB = stb.a
 STB_DIR = stb
 
 LEX_OUTPUT = $(BUILD_DIR)/lex.yy.c
 PARSER_OUTPUT = $(BUILD_DIR)/y.tab.c
-PARSER_HEADER = $(INCS_DIR)/y.tab.h
+PARSER_HEADER = $(INC_DIR)/y.tab.h
 
 NAME = B
 
@@ -51,7 +51,7 @@ $(LEX_OUTPUT): $(LEX_INPUT) $(PARSER_HEADER) | $(BUILD_DIR)
 
 # Compiler binary
 $(NAME): $(LEX_OUTPUT) $(PARSER_OUTPUT)
-	@$(CC) $(CFLAGS) -I$(INCS_DIR) -o $@ $(LEX_OUTPUT) $(PARSER_OUTPUT)
+	@$(CC) $(CFLAGS) -I$(INC_DIR) -o $@ $(LEX_OUTPUT) $(PARSER_OUTPUT)
 
 # Pattern rule to compile .b → .s using ./B
 $(TEST_DIR)/%.s: $(EXAMPLES_DIR)/%.b $(NAME) | $(TEST_DIR)
